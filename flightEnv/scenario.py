@@ -23,7 +23,7 @@ class ConflictScene:
         self.ghost = None
 
         self.conflict_acs = []
-        self.conflicts, self.fake_conflicts = [], []
+        self.conflicts = []
         self.cmd_info = {}
         self.result = False
         self.tracks = {}
@@ -64,7 +64,6 @@ class ConflictScene:
 
             conflict_acs = []
             for c in conflicts:
-                # c.printf()
                 conflict_acs += c.id.split('-')
             self.conflicts = conflicts
             self.conflict_acs = list(set(conflict_acs))
@@ -88,7 +87,7 @@ class ConflictScene:
             for i in r_tree.intersection(bbox):
                 a1 = agents[ac_en[i]]
                 status = a1.get_x_data()
-                ele = [int(a1.id in self.conflict_acs),
+                ele = [2 * float(a1.id in self.conflict_acs) - 1.0,
                        status[0] - status0[0],
                        status[1] - status0[1],
                        (status[2] - status0[2]) / 300.0]
@@ -108,7 +107,6 @@ class ConflictScene:
 
         conflict_acs = self.conflict_acs
         now = agent_set.time
-        # print('>>> t3', now, self.now())
 
         # 解析、分配动作
         cmd_info = {}
@@ -118,34 +116,26 @@ class ConflictScene:
 
             cmd_list = []
             for cmd in int_2_cmd(assign_time, actions[i]):
-                # print(conflict_ac, cmd)
                 agent.assign_cmd(cmd)
                 cmd_list.append(cmd)
             cmd_info[conflict_ac] = cmd_list
         self.cmd_info = cmd_info
 
         ghost = AircraftAgentSet(other=agent_set)
-        # print('>>> t4', ghost.time, self.now())
 
         # 检查动作的解脱效果
-        fake_conflicts, self.tracks, ok = {ac: [] for ac in conflict_acs}, {}, True
+        self.tracks, self.result = {}, True
         while ghost.time < now + 2 * self.advance:
             self.tracks[ghost.time] = ghost.do_step(duration=5)
             if ghost.time == now + self.advance:
                 self.ghost = AircraftAgentSet(other=ghost)
 
-            for c in ghost.detect_conflict_list(search=conflict_acs):
-                [a0, a1] = c.id.split('-')
-                if a0 in conflict_acs:
-                    fake_conflicts[a0].append(c)
-                if a1 in conflict_acs:
-                    fake_conflicts[a1].append(c)
-                ok = False
-        # print('>>> t5', ghost.time, now + 2 * self.advance, self.now())
+            conflicts = ghost.detect_conflict_list(search=conflict_acs)
+            if len(conflicts) > 0:
+                self.result = False
+                break
 
-        if ok:
+        if self.result:
             self.agent_set = agent_set
 
-        self.result = ok
-        self.fake_conflicts = fake_conflicts
         return self.get_states(a_set0=self.ghost, a_set1=ghost)

@@ -9,6 +9,11 @@ from algo.memory import ReplayMemory, Experience
 from algo.misc import *
 
 
+def make_exp_id(args):
+    return 'train_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.max_step_per_epi, args.meta_final,
+                                               args.gamma, args.a_lr, args.c_lr, args.batch_size)
+
+
 class MADDPG:
     def __init__(self, dim_obs, dim_act, args, record=True):
         self.args = args
@@ -26,7 +31,7 @@ class MADDPG:
         self.c_loss, self.a_loss = [], []
 
         if record:
-            self.writer = SummaryWriter(logs_path + args.experiment_id)
+            self.writer = SummaryWriter(logs_path + make_exp_id(args))
         else:
             self.writer = None
 
@@ -115,8 +120,7 @@ class MADDPG:
             soft_update(self.critic_target, self.critic, self.args.tau)
             soft_update(self.actor_target, self.actor, self.args.tau)
 
-            self.writer.add_scalars('loss', {'critic': np.mean(self.c_loss), 'actor': np.mean(self.a_loss)}, step)
-            self.writer.add_scalars('memory', self.memory.counter(), step)
+            self.writer.add_scalars('L', {'c': np.mean(self.c_loss), 'a': np.mean(self.a_loss)}, step)
             self.c_loss, self.a_loss = [], []
 
     def choose_action(self, states, noisy=True):

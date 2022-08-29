@@ -19,14 +19,7 @@ def calc_reward(scene):
         rewards = rew_for_cmd(conflict_acs, scene.cmd_info)
         solved = True
     else:
-        now = scene.now()
-        conflicts = scene.fake_conflicts
-        rewards = []
-        for ac in conflict_acs:
-            if len(conflicts[ac]) > 0:
-                rewards.append(-1.0 * len(conflicts[ac]))
-            else:
-                rewards.append(-0.5)
+        rewards = [-1.0 for _ in conflict_acs]
         solved = False
     return solved, rewards
 
@@ -52,21 +45,12 @@ class ConflictEnv(gym.Env, ABC):
         self.video_out = cv2.VideoWriter('trained/scenario.avi',
                                          cv2.VideoWriter_fourcc(*'MJPG'), fps, (width, length))
 
-    def reset(self, mode='next_p'):
-        if mode == 'next_s':
-            self.scene = None
+    def reset(self, change=True):
+        if change:
+            idx = np.random.randint(0, self.size)
+            self.scene = ConflictScene(self.train[idx], x=self.x)
 
-        while True:
-            if self.scene is None:
-                idx = np.random.randint(0, self.size)
-                self.scene = ConflictScene(self.train[idx], x=self.x)
-
-            states = self.scene.next_point()
-            if states is None:
-                self.scene = None
-                continue
-
-            return states
+        return self.scene.next_point()
 
     def step(self, actions, scene=None):
         if scene is None:

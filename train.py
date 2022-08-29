@@ -13,19 +13,18 @@ def args_parse():
     parser.add_argument('--memory_length', default=int(5e4), type=int)
     parser.add_argument('--max_steps', help='meta-training iterations', default=int(1e6), type=int)
     parser.add_argument('--inner_iter', help='samples', default=5, type=int)  # 1
-    parser.add_argument('--max_step_per_epi', default=1, type=int)  # 2
     parser.add_argument('--meta-step-size', help='meta-training step size', default=1.0, type=float)
-    parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.01, type=float)  # 3
+    parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.01, type=float)  # 2
 
     parser.add_argument('--tau', default=0.001, type=float)
-    parser.add_argument('--gamma', default=0.0, type=float)  # 4
+    parser.add_argument('--gamma', default=0.0, type=float)  # 3
     parser.add_argument('--seed', default=777, type=int)
-    parser.add_argument('--a_lr', default=0.0001, type=float)  # 5
-    parser.add_argument('--c_lr', default=0.0001, type=float)  # 6
-    parser.add_argument('--batch_size', default=16, type=int)  # 7
+    parser.add_argument('--a_lr', default=0.0001, type=float)  # 4
+    parser.add_argument('--c_lr', default=0.0001, type=float)  # 5
+    parser.add_argument('--batch_size', default=256, type=int)  # 6
 
     parser.add_argument("--save_interval", default=1000, type=int)
-    parser.add_argument('--step_before_train', default=100, type=int)
+    parser.add_argument('--step_before_train', default=1000, type=int)
 
     return parser.parse_args()
 

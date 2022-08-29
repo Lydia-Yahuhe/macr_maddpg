@@ -10,8 +10,8 @@ from algo.misc import *
 
 
 def make_exp_id(args):
-    return 'train_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.max_step_per_epi, args.meta_final,
-                                               args.gamma, args.a_lr, args.c_lr, args.batch_size)
+    return 'train_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.meta_final, args.gamma,
+                                            args.a_lr, args.c_lr, args.batch_size)
 
 
 class MADDPG:
@@ -107,7 +107,6 @@ class MADDPG:
                 actor_loss.backward()
                 th.nn.utils.clip_grad_norm_(self.actor.parameters(), 1)
                 self.actor_optimizer.step()
-
                 self.a_loss.append(actor_loss.detach().numpy())
 
             actor_new_vars.append(self.actor.state_dict())

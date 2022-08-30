@@ -10,7 +10,7 @@ def args_parse():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--max_episodes', default=int(1e5), type=int)
-    parser.add_argument('--memory_length', default=int(5e4), type=int)
+    parser.add_argument('--memory_length', default=int(1e4), type=int)
     parser.add_argument('--max_steps', help='meta-training iterations', default=int(1e6), type=int)
     parser.add_argument('--inner_iter', help='samples', default=5, type=int)  # 1
     parser.add_argument('--meta-step-size', help='meta-training step size', default=1.0, type=float)

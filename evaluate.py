@@ -28,7 +28,6 @@ def train():
 
             while True:
                 states = scene.next_point()
-                # print(states)
                 if states is None:
                     solved_epi.append(1.0)
                     break

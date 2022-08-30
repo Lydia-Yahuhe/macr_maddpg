@@ -10,8 +10,8 @@ from algo.misc import *
 
 
 def make_exp_id(args):
-    return 'train_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.meta_final, args.gamma,
-                                            args.a_lr, args.c_lr, args.batch_size)
+    return 'train_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.step_per_epi, args.meta_final,
+                                            args.gamma, args.a_lr, args.c_lr, args.batch_size)
 
 
 class MADDPG:
@@ -135,6 +135,6 @@ class MADDPG:
         actions = th.clamp(actions, -1, 1)
 
         if self.var > 0.05:
-            self.var *= 0.99995
+            self.var *= 0.99999
 
         return actions.data.cpu().numpy()

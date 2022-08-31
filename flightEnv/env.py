@@ -52,6 +52,15 @@ class ConflictEnv(gym.Env, ABC):
 
         return self.scene.next_point()
 
+    def reset_for_eval(self, change=True):
+        if change:
+            self.scene = ConflictScene(self.train.pop(), x=self.x)
+
+        return self.scene.next_point()
+
+    def eval_is_over(self):
+        return len(self.train) <= 0
+
     def step(self, actions, scene=None):
         if scene is None:
             scene = self.scene

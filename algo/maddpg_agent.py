@@ -39,13 +39,13 @@ class MADDPG:
         # net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic, 'critic')
 
     def load_model(self):
-        print("load model!")
         actor = th.load(model_path + "actor.pth")
         critic = th.load(model_path + "critic.pth")
         self.actor.load_state_dict(actor.state_dict())
         self.critic.load_state_dict(critic.state_dict())
         self.actor_target = deepcopy(self.actor)
         self.critic_target = deepcopy(self.critic)
+        print("load model successfully!")
 
     def save_model(self):
         th.save(self.actor, model_path + 'actor.pth')

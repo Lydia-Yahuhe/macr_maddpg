@@ -80,7 +80,7 @@ class ConflictScene:
         states = []
         for conflict_ac in self.conflict_acs:
             a0 = agents[conflict_ac]
-            bbox = make_bbox(a0.position, ext=(0.5, 0.5, 1500))
+            bbox = make_bbox(a0.position, ext=(1.0, 1.0, 1500.0))
             status0 = a0.get_x_data()
 
             state_dict = {}
@@ -90,7 +90,7 @@ class ConflictScene:
                 ele = [2 * float(a1.id in self.conflict_acs) - 1.0,
                        status[0] - status0[0],
                        status[1] - status0[1],
-                       (status[2] - status0[2]) / 300.0]
+                       (status[2] - status0[2]) / 1500.0]
                 state_dict[position_in_bbox(bbox, status)] = ele
 
             state = [[0.0 for _ in range(4)] for _ in range(length)]

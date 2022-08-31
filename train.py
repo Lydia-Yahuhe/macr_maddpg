@@ -1,7 +1,5 @@
 import argparse
 
-import numpy as np
-
 from flightEnv.env import ConflictEnv
 
 from algo.maddpg_agent import MADDPG
@@ -28,7 +26,7 @@ def args_parse():
     parser.add_argument('--batch_size', default=256, type=int)  # 7
 
     parser.add_argument("--save_interval", default=1000, type=int)
-    parser.add_argument('--step_before_train', default=1000, type=int)
+    parser.add_argument('--episode_before_train', default=1000, type=int)
 
     return parser.parse_args()
 
@@ -39,13 +37,14 @@ def train():
 
     env = ConflictEnv(x=10, size=16, ratio=0.75)
     model = MADDPG(env.observation_space.shape[0], env.action_space.n, args)
-    # model.load_model()
+    model.load_model()
 
     # 每百回合的平均奖励、每百步的解脱率、每百回合的解脱率、每回合的步数
     rew_epi, rew_step, sr_step, sr_epi, step_epi, count_step = [], [], [], [], [], []
 
-    episode, t, rew, change = 1, 0, 0.0, True
-    for step in range(1, args.max_steps):
+    # 步数、回合数、回合内步数、回合内奖励和、是否更换新的场景
+    step, episode, t, rew, change = 0, 1, 0, 0.0, True
+    while True:
         states, done = env.reset(change=change), False
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
@@ -65,11 +64,12 @@ def train():
                 # states = next_states
 
                 count += 1
+                step += 1
                 print('{:>2d} {:>2d} {:>6d} {:>6d}'.format(count, t, step, episode), end='\t')
                 print(['{:>+4.2f}'.format(rew) for rew in rewards])
 
                 # 开始更新网络参数
-                if step >= args.step_before_train:
+                if episode >= args.episode_before_train:
                     frac_done = step / (args.max_steps * 0.3)
                     step_size = frac_done * args.meta_final + (1 - frac_done) * args.meta_step_size
                     model.update(step, step_size)
@@ -104,7 +104,7 @@ def train():
                 model.save_model()
 
         # 回合数超过设定最大值，则结束训练
-        if episode >= args.max_episodes:
+        if episode >= args.max_episodes or step >= args.max_steps:
             break
 
     model.close()

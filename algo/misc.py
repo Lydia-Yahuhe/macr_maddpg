@@ -15,6 +15,7 @@ root = 'trained/'
 logs_path = root + 'logs/'
 graph_path = root + 'graph/'
 model_path = root + 'model/'
+
 if not os.path.exists(logs_path):
     os.mkdir(logs_path)
 if not os.path.exists(graph_path):

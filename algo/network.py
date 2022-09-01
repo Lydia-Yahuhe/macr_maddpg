@@ -38,16 +38,14 @@ class Critic(nn.Module):
 class Actor(nn.Module):
     def __init__(self, dim_observation, dim_action):
         super(Actor, self).__init__()
-        self.FC1 = nn.Linear(dim_observation, 256)
-        self.FC2 = nn.Linear(256, 256)
-        self.FC3 = nn.Linear(256, 128)
-        self.FC4 = nn.Linear(128, 128)
-        self.FC5 = nn.Linear(128, dim_action)
+        self.FC1 = nn.Linear(dim_observation, 128)
+        self.FC2 = nn.Linear(128, 128)
+        self.FC3 = nn.Linear(128, 64)
+        self.FC4 = nn.Linear(64, dim_action)
 
     def forward(self, obs):
         result = F.relu(self.FC1(obs))
         result = F.relu(self.FC2(result))
         result = F.relu(self.FC3(result))
-        result = F.relu(self.FC4(result))
-        result = th.tanh(self.FC5(result))
+        result = th.tanh(self.FC4(result))
         return result

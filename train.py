@@ -14,7 +14,7 @@ def args_parse():
     parser.add_argument('--max_steps', default=int(1e6), type=int)
 
     parser.add_argument('--inner_iter', help='meta-learning parameter', default=5, type=int)  # 1
-    parser.add_argument('--step_per_epi', help='samples', default=5, type=int)  # 2
+    parser.add_argument('--step_per_epi', help='samples', default=3, type=int)  # 2
     parser.add_argument('--meta-step-size', help='meta-training step size', default=1.0, type=float)
     parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.01, type=float)  # 3
 
@@ -37,7 +37,7 @@ def train():
 
     env = ConflictEnv(x=10, size=16, ratio=0.75)
     model = MADDPG(env.observation_space.shape[0], env.action_space.n, args)
-    model.load_model()
+    # model.load_model()
 
     # 每百回合的平均奖励、每百步的解脱率、每百回合的解脱率、每回合的步数
     rew_epi, rew_step, sr_step, sr_epi, step_epi, count_step = [], [], [], [], [], []

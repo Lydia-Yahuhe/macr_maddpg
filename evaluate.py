@@ -37,7 +37,7 @@ class NetLooker:
         self.rows = length // 2 + 1
         c_start = int(self.height * 0.05)  # 最左侧节点圆心与左侧边界的距离
         r_interval = (self.height - 2 * c_start) // (self.rows - 1)  # 相邻层节点圆心的距离
-        c_interval = int(self.width // max([var.shape[0] for var in self.vars.values()]))  # 同层相邻节点圆心的距离
+        c_interval = int(self.width // max([var.shape[-1] for var in self.vars.values()]))  # 同层相邻节点圆心的距离
         self.radius = int(c_interval * 0.4)
 
         var_list, link_metrix, count = [], [], 0
@@ -78,7 +78,7 @@ class NetLooker:
 
             for j, coord1 in enumerate(link_metrix[i]):
                 for k, coord2 in enumerate(link_metrix[i + 1]):
-                    # bias的颜色（越大越长，负右正左）
+                    # bias的颜色（越大越长，负下正上）
                     if j == len(link_metrix[i+1]) - 1 and look_bias:
                         c_bias = 255 if abs(biases[k]*scale) >= 1.0 else 200
                         image = cv2.line(image,
@@ -150,7 +150,7 @@ def train():
     model.load_model()
 
     suffix = int(round(time.time() * 1000))
-    a_looker = NetLooker(net=model.actor, name='actor')
+    a_looker = NetLooker(net=model.actor, name='actor', look_weight=True)
     # c_looker = NetLooker(net=model.critic, name='critic')
 
     # 每百步的解脱率、每百回合的解脱率、每回合的步数
@@ -163,7 +163,7 @@ def train():
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
         if states is not None:
-            a_looker.look(states, suffix='{}_{}_{}'.format(suffix, t, episode))
+            a_looker.look(states, suffix='{}_{}_{}'.format(suffix, episode, t))
             actions = model.choose_action(states, noisy=False)
             next_states, rewards, done, info = env.step(actions)
             # env.render(counter='{}_{}_{}'.format(t, step, episode))
@@ -199,5 +199,23 @@ def train():
     print('----------------------------')
 
 
+"""
+Episode: <=3000
+----------------------------
+   sr_step: 0.5897435897435898
+sr_episode: 0.0
+  rew_step: -0.04852887233002828
+   rew_epi: -0.11828912630444392
+  step_epi: 2.4375
+----------------------------
+Episode: 4000
+----------------------------
+   sr_step: 0.6341463414634146
+sr_episode: 0.0
+  rew_step: -0.02853248833065353
+   rew_epi: -0.13031086259831984
+  step_epi: 2.6666666666666665
+----------------------------
+"""
 if __name__ == '__main__':
     train()

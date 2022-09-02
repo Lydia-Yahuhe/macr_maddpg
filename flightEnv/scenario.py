@@ -5,7 +5,7 @@ import numpy as np
 from flightEnv.agentSet import AircraftAgentSet
 from flightEnv.cmd import int_2_cmd
 
-from flightSim.utils import make_bbox, position_in_bbox, get_side_length
+from flightSim.utils import make_bbox, position_in_bbox, get_side_length, border_func
 from flightSim.render import border_origin as border
 
 duration = 1
@@ -23,7 +23,7 @@ class ConflictScene:
         self.advance = advance  # 冲突探测提前量
 
         self.entity = AircraftAgentSet(fpl_list=info['fpl_list'], candi=info['candi'])
-        self.entity.do_step(info['clock']-advance-duration, basic=True)
+        self.entity.do_step(info['clock'] - advance - duration, basic=True)
 
         self.agent_set = self.entity
         self.ghost = None
@@ -35,7 +35,7 @@ class ConflictScene:
         self.result = False
         self.tracks = {}
 
-        print('******************************', info['id'], self.now(), duration, advance, info['clock'])
+        print('---------------------', info['id'], x, A, c_type, limit, advance)
 
     # def initialize(self):
     #     self.agent_set = AircraftAgentSet(other=self.entity)
@@ -43,21 +43,20 @@ class ConflictScene:
     def now(self):
         return self.agent_set.time
 
-    def is_next_point(self):
-        return len(self.conflict_acs_total) <= 0
-
     def get_lines(self):
         coords = []
-        for i in range(int(math.sqrt(self.A))+1):
-            coords.append([[border[0], border[2]+i*self.side_length[1]],
-                           [border[1], border[2]+i*self.side_length[1]]])
-            coords.append([[border[0]+i*self.side_length[0], border[2]],
-                           [border[0]+i*self.side_length[0], border[3]]])
+        for i in range(int(math.sqrt(self.A)) + 1):
+            coords.append([[border[0], border[2] + i * self.side_length[1]],
+                           [border[1], border[2] + i * self.side_length[1]]])
+            coords.append([[border[0] + i * self.side_length[0], border[2]],
+                           [border[0] + i * self.side_length[0], border[3]]])
         return coords
 
     def __get_conflict_ac(self, conflicts):
+        if len(conflicts) == 1:
+            return [conflicts[0].id.split('-')]
+
         check = []
-        print(self.c_type, self.A)
 
         if self.c_type == 'pair':
             conflict_acs = []
@@ -80,17 +79,21 @@ class ConflictScene:
                 [a0, a1] = c.id.split('-')
                 if a0 not in check:
                     check.append(a0)
-                    row = max(min(int((c.pos0[0] - border[0]) / self.side_length[0]), num-1), 0)
-                    column = max(min(int((c.pos0[1] - border[2]) / self.side_length[1]), num-1), 0)
-                    idx = int(row*math.sqrt(self.A)+column)
-                    print(a0, row, column, idx)
+                    r = border_func(int((c.pos0[0] - border[0]) / self.side_length[0]),
+                                    min_v=0, max_v=num - 1, d_type=int)
+                    c = border_func(int((c.pos0[1] - border[2]) / self.side_length[1]),
+                                    min_v=0, max_v=num - 1, d_type=int)
+                    idx = int(r * math.sqrt(self.A) + c)
+                    # print(a0, r, c, idx)
                     conflict_acs[idx].append(a0)
                 if a1 not in check:
                     check.append(a1)
-                    row = max(min(int((c.pos1[0] - border[0]) / self.side_length[0]), num-1), 0)
-                    column = max(min(int((c.pos1[1] - border[2]) / self.side_length[1]), num-1), 0)
-                    idx = int(row*math.sqrt(self.A)+column)
-                    print(a1, row, column, idx)
+                    r = border_func(int((c.pos1[0] - border[0]) / self.side_length[0]),
+                                    min_v=0, max_v=num - 1, d_type=int)
+                    c = border_func(int((c.pos1[1] - border[2]) / self.side_length[1]),
+                                    min_v=0, max_v=num - 1, d_type=int)
+                    idx = int(r * math.sqrt(self.A) + c)
+                    # print(a1, r, c, idx)
                     conflict_acs[idx].append(a1)
             conflict_acs = [lst for lst in conflict_acs if len(lst) > 0]
 
@@ -98,8 +101,8 @@ class ConflictScene:
 
     def next_point(self):
         if len(self.conflict_acs_total) > 0:
-            self.conflict_acs = self.conflict_acs_total.pop()
-            print(self.conflict_acs_total, self.conflict_acs)
+            self.conflict_acs = self.conflict_acs_total.pop(0)
+            # print(self.conflict_acs, self.conflict_acs_total)
             assert len(self.conflict_acs) >= 0
             return self.get_states(a_set0=self.agent_set, a_set1=self.ghost)
 
@@ -131,10 +134,10 @@ class ConflictScene:
 
             self.conflicts = conflicts
             self.conflict_acs_total = self.__get_conflict_ac(conflicts)
-            print(self.conflict_acs_total)
+            # print(self.conflict_acs_total)
 
-            self.conflict_acs = self.conflict_acs_total.pop()
-            print(self.conflict_acs, self.conflict_acs_total)
+            self.conflict_acs = self.conflict_acs_total.pop(0)
+            # print(self.conflict_acs, self.conflict_acs_total)
 
             return self.get_states(a_set0=self.agent_set, a_set1=self.ghost)
 

@@ -125,13 +125,13 @@ def add_points_on_base_map(points, image, font_scale=0.4, color=(0, 0, 0), font=
             w, z = 50, 620
 
             cv2.putText(image, name, (x, y + 10), font, font_scale, color, 1)
-            cv2.putText(image, name, (w + count * 200, z + 10), font, font_scale, color, 1)
+            cv2.putText(image, name, (w + count * 150, z + 10), font, font_scale, color, 1)
             state = 'Altitude: {}'.format(round(alt, decimal))
-            cv2.putText(image, state, (w + count * 200, z + 30), font, font_scale, color, 1)
+            cv2.putText(image, state, (w + count * 150, z + 30), font, font_scale, color, 1)
             state = '   Speed: {}({})'.format(round(point[0], decimal), round(point[1], decimal))
-            cv2.putText(image, state, (w + count * 200, z + 50), font, font_scale, color, 1)
+            cv2.putText(image, state, (w + count * 150, z + 50), font, font_scale, color, 1)
             state = ' Heading: {}'.format(round(point[2], decimal))
-            cv2.putText(image, state, (w + count * 200, z + 70), font, font_scale, color, 1)
+            cv2.putText(image, state, (w + count * 150, z + 70), font, font_scale, color, 1)
             count += 1
 
         points_just_coord.append((lng, lat, alt))

@@ -19,16 +19,17 @@ def args_parse():
     parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.1, type=float)  # 3
 
     parser.add_argument('--tau', default=0.001, type=float)
-    parser.add_argument('--gamma', default=0.0, type=float)  # 4
+    parser.add_argument('--gamma', default=0.0, type=float)
     parser.add_argument('--seed', default=777, type=int)
-    parser.add_argument('--a_lr', default=0.0001, type=float)  # 5
-    parser.add_argument('--c_lr', default=0.0001, type=float)  # 6
-    parser.add_argument('--batch_size', default=256, type=int)  # 7
+    parser.add_argument('--a_lr', default=0.0001, type=float)  # 4
+    parser.add_argument('--c_lr', default=0.0001, type=float)  # 5
+    parser.add_argument('--batch_size', default=256, type=int)  # 6
 
-    parser.add_argument('--A', default=9, type=int)  # 8
-    parser.add_argument('--c_type', default='conc', type=str)  # 9
-    parser.add_argument('--x', default=10, type=int)  # 9
+    parser.add_argument('--A', default=9, type=int)  # 7
+    parser.add_argument('--c_type', default='pair', type=str)  # 8
+    parser.add_argument('--x', default=60, type=int)  # 9
 
+    parser.add_argument("--load_model", default=True, type=bool)
     parser.add_argument("--save_interval", default=1000, type=int)
     parser.add_argument('--episode_before_train', default=1000, type=int)
 
@@ -40,8 +41,8 @@ def train():
     # th.manual_seed(args.seed)
 
     env = ConflictEnv(size=16, ratio=0.75, x=args.x, A=args.A, c_type=args.c_type)
-    model = MADDPG(env.observation_space.shape[0], env.action_space.n, args)
-    # model.load_model()
+    model = MADDPG(env.observation_space.shape[0], env.action_space.n, args,
+                   draw_net=False, load=args.load_model)
 
     # 每百回合的平均奖励、每百步的解脱率、每百回合的解脱率、每回合的步数
     rew_epi, rew_step, sr_step, sr_epi, step_epi, count_step = [], [], [], [], [], []

@@ -10,12 +10,12 @@ from algo.misc import *
 
 
 def make_exp_id(args):
-    return 'train_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.step_per_epi, args.meta_final,
-                                            args.gamma, args.a_lr, args.c_lr, args.batch_size)
+    return 'train_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.step_per_epi, args.meta_final, args.a_lr,
+                                                     args.c_lr, args.batch_size, args.A, args.c_type, args.x)
 
 
 class MADDPG:
-    def __init__(self, dim_obs, dim_act, args, record=True):
+    def __init__(self, dim_obs, dim_act, args, record=True, draw_net=False, load=False):
         self.args = args
         self.var = 1.0
 
@@ -35,8 +35,14 @@ class MADDPG:
         else:
             self.writer = None
 
-        # net_visual([(1, dim_obs)], self.actor, 'actor')
-        # net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic, 'critic')
+        if draw_net:
+            print('Draw the net of Actor and Critic!')
+            net_visual([(1, dim_obs)], self.actor, 'actor')
+            net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic, 'critic')
+
+        if load:
+            print("Load model successfully!")
+            self.load_model()
 
     def load_model(self):
         actor = th.load(model_path + "actor.pth")
@@ -45,7 +51,6 @@ class MADDPG:
         self.critic.load_state_dict(critic.state_dict())
         self.actor_target = deepcopy(self.actor)
         self.critic_target = deepcopy(self.critic)
-        print("load model successfully!")
 
     def save_model(self):
         th.save(self.actor, model_path + 'actor.pth')
@@ -119,7 +124,7 @@ class MADDPG:
             soft_update(self.critic_target, self.critic, self.args.tau)
             soft_update(self.actor_target, self.actor, self.args.tau)
 
-            self.writer.add_scalars('L', {'c': np.mean(self.c_loss), 'a': np.mean(self.a_loss)}, step)
+            self.writer.add_scalars('L', {'c': np.mean(self.c_loss), 'a': np.mean(self.a_loss), 's': step_size}, step)
             self.c_loss, self.a_loss = [], []
 
     def choose_action(self, states, noisy=True):

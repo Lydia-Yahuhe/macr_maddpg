@@ -5,10 +5,7 @@ from copy import deepcopy
 import cv2
 
 from train import *
-
-
-def border_func(x, min_v=-1.0, max_v=1.0, d_type=float):
-    return d_type(min(max(x, min_v), max_v))
+from flightSim.utils import border_func
 
 
 standard_width = 1600

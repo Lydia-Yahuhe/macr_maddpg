@@ -31,23 +31,24 @@ class ConflictEnv(gym.Env, ABC):
         self.train, self.test = load_and_split_data(size=size, ratio=ratio)
 
         self.action_space = spaces.Discrete(CmdCount)
-        self.observation_space = spaces.Box(low=-np.inf, high=+np.inf, shape=(200,), dtype=np.float64)
+        self.observation_space = spaces.Box(low=-1.0, high=+1.0, shape=(200,), dtype=np.float64)
 
-        print('----------env----------')
-        print('    train size: {:>6}'.format(len(self.train)))
-        print(' validate size: {:>6}'.format(len(self.test)))
-        print('  action shape: {}'.format((self.action_space.n,)))
-        print('   state shape: {}'.format(self.observation_space.shape))
-        print('-----------------------')
+        print('----------env------------')
+        print('|    total size: {:<6} |'.format(size))
+        print('|   split ratio: {:<6.2f} |'.format(ratio))
+        print('|    train size: {:<6} |'.format(len(self.train)))
+        print('| validate size: {:<6} |'.format(len(self.test)))
+        print('|  action shape: {}   |'.format((self.action_space.n,)))
+        print('|   state shape: {} |'.format(self.observation_space.shape))
+        print('-------------------------')
 
         self.scene = None
-        self.size = len(self.train)
         self.video_out = cv2.VideoWriter('trained/scenario.avi',
                                          cv2.VideoWriter_fourcc(*'MJPG'), fps, (width, length))
 
     def reset(self, change=True):
         if change:
-            idx = np.random.randint(0, self.size)
+            idx = np.random.randint(0, len(self.train))
             self.scene = ConflictScene(self.train[idx], **self.kwargs)
 
         return self.scene.next_point()
@@ -75,12 +76,13 @@ class ConflictEnv(gym.Env, ABC):
 
         image = copy.deepcopy(base_img)
 
+        # 网格线
+        image = add_lines_on_base_map(self.scene.get_lines(), image, color=(106, 106, 255), display=False)
+
         # 冲突信息
         conflict_info = {'>>> Conflict': str(self.scene.result)}
         for i, c in enumerate(self.scene.conflicts):
             conflict_info['real_' + str(i + 1)] = c.to_string()
-
-        image = add_lines_on_base_map(self.scene.get_lines(), image, color=(106, 106, 255), display=False)
 
         # i = 0
         # for a0, cs in self.scene.fake_conflicts.items():

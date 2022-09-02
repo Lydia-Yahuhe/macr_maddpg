@@ -12,6 +12,10 @@ KT2MPS = 0.514444444444444
 NM2M = 1852
 
 
+def border_func(x, min_v=-1.0, max_v=1.0, d_type=float):
+    return d_type(min(max(x, min_v), max_v))
+
+
 def distance_point2d(d0, d1):
     lng0 = radians(d0.lng)
     lat0 = radians(d0.lat)

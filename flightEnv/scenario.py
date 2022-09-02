@@ -1,18 +1,24 @@
+import math
+
 import numpy as np
 
 from flightEnv.agentSet import AircraftAgentSet
 from flightEnv.cmd import int_2_cmd
 
-from flightSim.utils import make_bbox, position_in_bbox
+from flightSim.utils import make_bbox, position_in_bbox, get_side_length
+from flightSim.render import border_origin as border
 
 duration = 1
 
 
 class ConflictScene:
-    def __init__(self, info, x=0, limit=30, advance=300):
+    def __init__(self, info, x=0, A=1, c_type='conc', limit=30, advance=300):
         self.info = info
 
         self.x = x  # 变量1：时间范围大小
+        self.A = A  # 变量2：空域范围（4——1/4空域）
+        self.side_length = get_side_length(border, A)
+        self.c_type = c_type  # 冲突解脱类型（conc——同时解脱，pair——两两解脱）
         self.delta_T = limit  # 预留的计算时间
         self.advance = advance  # 冲突探测提前量
 
@@ -22,6 +28,7 @@ class ConflictScene:
         self.agent_set = self.entity
         self.ghost = None
 
+        self.conflict_acs_total = []
         self.conflict_acs = []
         self.conflicts = []
         self.cmd_info = {}
@@ -36,7 +43,66 @@ class ConflictScene:
     def now(self):
         return self.agent_set.time
 
+    def is_next_point(self):
+        return len(self.conflict_acs_total) <= 0
+
+    def get_lines(self):
+        coords = []
+        for i in range(int(math.sqrt(self.A))+1):
+            coords.append([[border[0], border[2]+i*self.side_length[1]],
+                           [border[1], border[2]+i*self.side_length[1]]])
+            coords.append([[border[0]+i*self.side_length[0], border[2]],
+                           [border[0]+i*self.side_length[0], border[3]]])
+        return coords
+
+    def __get_conflict_ac(self, conflicts):
+        check = []
+        print(self.c_type, self.A)
+
+        if self.c_type == 'pair':
+            conflict_acs = []
+            for c in conflicts:
+                two = []
+                [a0, a1] = c.id.split('-')
+                if a0 not in check:
+                    two.append(a0)
+                    check.append(a0)
+                if a1 not in check:
+                    two.append(a1)
+                    check.append(a1)
+
+                if len(two) > 0:
+                    conflict_acs.append(two)
+        else:
+            conflict_acs = [[] for _ in range(self.A)]
+            num = int(math.sqrt(self.A))
+            for c in conflicts:
+                [a0, a1] = c.id.split('-')
+                if a0 not in check:
+                    check.append(a0)
+                    row = max(min(int((c.pos0[0] - border[0]) / self.side_length[0]), num-1), 0)
+                    column = max(min(int((c.pos0[1] - border[2]) / self.side_length[1]), num-1), 0)
+                    idx = int(row*math.sqrt(self.A)+column)
+                    print(a0, row, column, idx)
+                    conflict_acs[idx].append(a0)
+                if a1 not in check:
+                    check.append(a1)
+                    row = max(min(int((c.pos1[0] - border[0]) / self.side_length[0]), num-1), 0)
+                    column = max(min(int((c.pos1[1] - border[2]) / self.side_length[1]), num-1), 0)
+                    idx = int(row*math.sqrt(self.A)+column)
+                    print(a1, row, column, idx)
+                    conflict_acs[idx].append(a1)
+            conflict_acs = [lst for lst in conflict_acs if len(lst) > 0]
+
+        return conflict_acs
+
     def next_point(self):
+        if len(self.conflict_acs_total) > 0:
+            self.conflict_acs = self.conflict_acs_total.pop()
+            print(self.conflict_acs_total, self.conflict_acs)
+            assert len(self.conflict_acs) >= 0
+            return self.get_states(a_set0=self.agent_set, a_set1=self.ghost)
+
         while True:
             self.agent_set.do_step(duration)
             # print('>>> t1', self.now())
@@ -56,17 +122,19 @@ class ConflictScene:
                     return None
                 continue
 
-            ghost = AircraftAgentSet(other=self.ghost)
+            if self.x > 0 and self.c_type == 'conc':
+                ghost = AircraftAgentSet(other=self.ghost)
 
-            while ghost.time < self.ghost.time + self.x:
-                ghost.do_step(duration=duration)
-                conflicts += ghost.detect_conflict_list()
+                while ghost.time < self.ghost.time + self.x:
+                    ghost.do_step(duration=duration)
+                    conflicts += ghost.detect_conflict_list()
 
-            conflict_acs = []
-            for c in conflicts:
-                conflict_acs += c.id.split('-')
             self.conflicts = conflicts
-            self.conflict_acs = list(set(conflict_acs))
+            self.conflict_acs_total = self.__get_conflict_ac(conflicts)
+            print(self.conflict_acs_total)
+
+            self.conflict_acs = self.conflict_acs_total.pop()
+            print(self.conflict_acs, self.conflict_acs_total)
 
             return self.get_states(a_set0=self.agent_set, a_set1=self.ghost)
 

@@ -13,10 +13,10 @@ def args_parse():
     parser.add_argument('--memory_length', default=int(1e4), type=int)
     parser.add_argument('--max_steps', default=int(1e6), type=int)
 
-    parser.add_argument('--inner_iter', help='meta-learning parameter', default=5, type=int)  # 1
-    parser.add_argument('--step_per_epi', help='samples', default=3, type=int)  # 2
+    parser.add_argument('--inner_iter', help='meta-learning parameter', default=10, type=int)  # 1
+    parser.add_argument('--step_per_epi', help='samples', default=1, type=int)  # 2
     parser.add_argument('--meta-step-size', help='meta-training step size', default=1.0, type=float)
-    parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.01, type=float)  # 3
+    parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.1, type=float)  # 3
 
     parser.add_argument('--tau', default=0.001, type=float)
     parser.add_argument('--gamma', default=0.0, type=float)  # 4
@@ -24,6 +24,10 @@ def args_parse():
     parser.add_argument('--a_lr', default=0.0001, type=float)  # 5
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 6
     parser.add_argument('--batch_size', default=256, type=int)  # 7
+
+    parser.add_argument('--A', default=9, type=int)  # 8
+    parser.add_argument('--c_type', default='conc', type=str)  # 9
+    parser.add_argument('--x', default=10, type=int)  # 9
 
     parser.add_argument("--save_interval", default=1000, type=int)
     parser.add_argument('--episode_before_train', default=1000, type=int)
@@ -35,7 +39,7 @@ def train():
     args = args_parse()
     # th.manual_seed(args.seed)
 
-    env = ConflictEnv(x=10, size=16, ratio=0.75)
+    env = ConflictEnv(size=16, ratio=0.75, x=args.x, A=args.A, c_type=args.c_type)
     model = MADDPG(env.observation_space.shape[0], env.action_space.n, args)
     # model.load_model()
 
@@ -53,7 +57,7 @@ def train():
             while True:
                 actions = model.choose_action(states, noisy=True)
                 next_states, rewards, done, info = env.step(actions)
-                # env.render(counter='{}_{}_{}'.format(t, step, episode))
+                env.render(counter='{}_{}_{}'.format(t, step, episode))
 
                 # replay buffer R
                 obs = th.from_numpy(np.stack(states)).float().to(device)
@@ -70,7 +74,7 @@ def train():
 
                 # 开始更新网络参数
                 if episode >= args.episode_before_train:
-                    frac_done = step / (args.max_steps * 0.3)
+                    frac_done = step / (args.max_steps * 0.1)
                     step_size = frac_done * args.meta_final + (1 - frac_done) * args.meta_step_size
                     model.update(step, step_size)
 

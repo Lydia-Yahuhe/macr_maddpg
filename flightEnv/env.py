@@ -25,8 +25,8 @@ def calc_reward(scene):
 
 
 class ConflictEnv(gym.Env, ABC):
-    def __init__(self, x=0, size=None, ratio=0.8):
-        self.x = x
+    def __init__(self, size=None, ratio=0.8, **kwargs):
+        self.kwargs = kwargs
 
         self.train, self.test = load_and_split_data(size=size, ratio=ratio)
 
@@ -48,13 +48,13 @@ class ConflictEnv(gym.Env, ABC):
     def reset(self, change=True):
         if change:
             idx = np.random.randint(0, self.size)
-            self.scene = ConflictScene(self.train[idx], x=self.x)
+            self.scene = ConflictScene(self.train[idx], **self.kwargs)
 
         return self.scene.next_point()
 
     def reset_for_eval(self, change=True):
         if change:
-            self.scene = ConflictScene(self.train.pop(), x=self.x)
+            self.scene = ConflictScene(self.train.pop(), **self.kwargs)
 
         return self.scene.next_point()
 
@@ -69,7 +69,7 @@ class ConflictEnv(gym.Env, ABC):
         solved, rewards = calc_reward(scene)
         return next_states, rewards, solved, {}
 
-    def render(self, mode='human', wait=10, counter=''):
+    def render(self, mode='human', wait=100, counter=''):
         if self.video_out is None:
             return
 
@@ -80,12 +80,14 @@ class ConflictEnv(gym.Env, ABC):
         for i, c in enumerate(self.scene.conflicts):
             conflict_info['real_' + str(i + 1)] = c.to_string()
 
-        i = 0
-        for a0, cs in self.scene.fake_conflicts.items():
-            for c in cs:
-                conflict_info['fake_' + str(i + 1)] = c.to_string()
-                i += 1
-        image = add_texts_on_base_map(conflict_info, image, (750, 80), color=(180, 238, 180))
+        image = add_lines_on_base_map(self.scene.get_lines(), image, color=(106, 106, 255), display=False)
+
+        # i = 0
+        # for a0, cs in self.scene.fake_conflicts.items():
+        #     for c in cs:
+        #         conflict_info['fake_' + str(i + 1)] = c.to_string()
+        #         i += 1
+        image = add_texts_on_base_map(conflict_info, image, (750, 80), color=(0, 0, 0))
 
         # 指令信息
         cmd_info = {'>>> Command': ''}
@@ -93,7 +95,9 @@ class ConflictEnv(gym.Env, ABC):
             for i, cmd in enumerate(cmd_list):
                 key = '{:>10s}_{}'.format(conflict_ac, i)
                 cmd_info[key] = cmd.to_string()
-        image = add_texts_on_base_map(cmd_info, image, (750, 300), color=(180, 238, 180))
+        image = add_texts_on_base_map(cmd_info, image, (750, 300), color=(0, 0, 0))
+
+        image = add_texts_on_base_map({'>>> Status': ''}, image, (50, 600), color=(0, 0, 0))
 
         if self.scene.result:
             return
@@ -110,7 +114,7 @@ class ConflictEnv(gym.Env, ABC):
             # 全局信息
             global_info = {'>>> Information': g_info,
                            'Time': '{}({}), ac_en: {}, speed: x{}'.format(t, now, len(points), fps)}
-            frame = add_texts_on_base_map(global_info, frame, (750, 30), color=(255, 255, 0))
+            frame = add_texts_on_base_map(global_info, frame, (750, 30), color=(0, 0, 0))
 
             # 轨迹点
             frame, points_just_coord = add_points_on_base_map(points, frame, conflict_ac=conflict_acs)

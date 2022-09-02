@@ -8,7 +8,7 @@ from rtree import index
 from flightSim.load import routings
 from flightSim.utils import *
 
-# border = [109.3, 116, 29, 33.5]
+border_origin = [109.3, 116, 29, 33.5]
 border = [109, 120, 26, 34]
 scale = 100
 width, length = resolution(border, scale)
@@ -19,8 +19,8 @@ fps = 8
 interval = 30
 fl_list = [i * 300.0 for i in range(20, 29)]  # 6300~8400
 fl_list += [i * 300.0 + 200.0 for i in range(29, 41)]  # 8900~12200
-segment_property = {'color': (255, 255, 255), 'thickness': 1}
-border_property = {'color': (255, 191, 0), 'thickness': 2}
+segment_property = {'color': (107, 55, 19), 'thickness': 1}  # BGR
+border_property = {'color': (100, 100, 100), 'thickness': 2}
 
 
 def build_rt_index_with_list(points):
@@ -76,7 +76,7 @@ def generate_wuhan_base_map(frame_size, save_path=None, show=None):
                 (109.51666666666667, 31.9), (109.51666666666667, 31.9)]
 
     # 创建一个的黑色画布，RGB(0,0,0)即黑色
-    image = np.zeros(frame_size, np.uint8)
+    image = np.ones(frame_size, np.uint8) * 255
 
     # 将空域边界画在黑色画布上
     points = convert_coord_to_pixel(vertices, border=border, scale=scale)
@@ -100,9 +100,9 @@ def generate_wuhan_base_map(frame_size, save_path=None, show=None):
     return image
 
 
-def add_points_on_base_map(points, image, font_scale=0.4, color=(255, 255, 255), font=cv2.FONT_HERSHEY_SIMPLEX,
+def add_points_on_base_map(points, image, font_scale=0.4, color=(0, 0, 0), font=cv2.FONT_HERSHEY_SIMPLEX,
                            **kwargs):
-    points_just_coord = []
+    points_just_coord, count = [], 0
     for [name, lng, lat, alt, *point] in points:
         coord = [lng, lat]
         coord_idx = convert_coord_to_pixel([coord], border=border, scale=scale)[0]
@@ -115,21 +115,24 @@ def add_points_on_base_map(points, image, font_scale=0.4, color=(255, 255, 255),
 
         if name in kwargs['conflict_ac']:
             heading_spd_point = destination(coord, point[-1], 600 / 3600 * point[0] * NM2M)
-            add_lines_on_base_map([[coord, heading_spd_point, False]], image, display=False)
+            add_lines_on_base_map([[coord, heading_spd_point, False]], image, color=(255, 0, 0), display=False)
 
-            bbox_coords = get_bbox_2d(coord, ext=(0.5, 0.5))
+            bbox_coords = get_bbox_2d(coord, ext=(1.0, 1.0))
             for i, pos in enumerate(bbox_coords[:-1]):
                 add_lines_on_base_map([[pos, bbox_coords[i+1], False]], image, display=False)
 
             [x, y] = coord_idx
+            w, z = 50, 620
 
             cv2.putText(image, name, (x, y + 10), font, font_scale, color, 1)
+            cv2.putText(image, name, (w + count * 200, z + 10), font, font_scale, color, 1)
             state = 'Altitude: {}'.format(round(alt, decimal))
-            cv2.putText(image, state, (x, y + 30), font, font_scale, color, 1)
+            cv2.putText(image, state, (w + count * 200, z + 30), font, font_scale, color, 1)
             state = '   Speed: {}({})'.format(round(point[0], decimal), round(point[1], decimal))
-            cv2.putText(image, state, (x, y + 50), font, font_scale, color, 1)
+            cv2.putText(image, state, (w + count * 200, z + 50), font, font_scale, color, 1)
             state = ' Heading: {}'.format(round(point[2], decimal))
-            cv2.putText(image, state, (x, y + 70), font, font_scale, color, 1)
+            cv2.putText(image, state, (w + count * 200, z + 70), font, font_scale, color, 1)
+            count += 1
 
         points_just_coord.append((lng, lat, alt))
     return image, points_just_coord
@@ -157,7 +160,7 @@ def add_lines_on_base_map(lines, image, color=(255, 0, 255), display=True, font_
         return image
 
     for [pos0, pos1, *other] in lines:
-        if other[-1]:
+        if len(other) > 0 and other[-1]:
             color = (255, 0, 255)
 
         [start, end] = convert_coord_to_pixel([pos0, pos1], border=border, scale=scale)
@@ -200,14 +203,17 @@ def add_hist_on_base_map(lst, pos, image, color=(255, 0, 255), font_scale=0.2, t
     return image
 
 
+# generate_wuhan_base_map((length, width, channel), save_path='../scripts/wuhan_base.jpg', show=1000)
+
+
 def render(agents, conflicts, save_path, wait=1):
     print(width, length, channel)
     # print(fl_list)
     # 生成武汉空域底图
-    # generate_wuhan_base_map((length, width, channel), save_path='scripts/wuhan_base.jpg', show=wait)
+    generate_wuhan_base_map((length, width, channel), save_path='scripts/wuhan_base.jpg', show=wait)
 
     # 武汉扇区的底图（有航路）
-    base_img = cv2.imread('wuhan_base.jpg', cv2.IMREAD_COLOR)
+    base_img = cv2.imread('../scripts/wuhan_base.jpg', cv2.IMREAD_COLOR)
 
     frame_size = (width, length)
     video_out = cv2.VideoWriter(save_path + '.avi', cv2.VideoWriter_fourcc(*'MJPG'), fps, frame_size)

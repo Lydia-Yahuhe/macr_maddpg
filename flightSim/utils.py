@@ -109,6 +109,11 @@ def destination(src, course: float, dist: float):
     return lng2 * RADIAN_DEG, lat2 * RADIAN_DEG
 
 
+def get_side_length(border, A=1):
+    num = int(sqrt(A))
+    return [(border[1]-border[0])/num, (border[3]-border[2])/num]
+
+
 def make_bbox(pos, ext=(0, 0, 0)):
     return (pos[0] - ext[0], pos[1] - ext[1], pos[2] - ext[2],
             pos[0] + ext[0], pos[1] + ext[1], pos[2] + ext[2])

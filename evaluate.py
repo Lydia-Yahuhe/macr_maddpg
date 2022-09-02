@@ -103,7 +103,7 @@ class NetLooker:
             image = cv2.circle(image, matrix[i], self.radius, (c_node, c_node, c_node), thickness=thick)
         return image
 
-    def look(self, inputs, suffix=''):
+    def look(self, inputs, folder=None, suffix='actor'):
         ratio = self.ratio
         net = self.net
 
@@ -130,7 +130,9 @@ class NetLooker:
 
         cv2.imshow(self.name, image)
         cv2.waitKey(1000)
-        cv2.imwrite(graph_path+self.name+'/'+suffix+'.png', image)
+
+        if folder is not None:
+            cv2.imwrite(folder+'{}_{}.png'.format(self.name, suffix), image)
 
     def close(self):
         cv2.waitKey(1) & 0xFF
@@ -140,13 +142,16 @@ class NetLooker:
 def train():
     args = args_parse()
 
-    x, size = 10, 16
-    env = ConflictEnv(x=x, size=size, ratio=1.0)
+    env = ConflictEnv(x=args.x, A=args.A, c_type=args.c_type)
 
-    model = MADDPG(env.observation_space.shape[0], env.action_space.n, args, record=False)
-    model.load_model()
+    graph_path = os.path.join(args.load_path, 'graph/')
+    suffix = 400
 
-    suffix = int(round(time.time() * 1000))
+    model = MADDPG(env.observation_space.shape[0],
+                   env.action_space.n,
+                   args,
+                   load_path=[os.path.join(args.load_path, 'model/'), suffix])
+
     a_looker = NetLooker(net=model.actor, name='actor', look_weight=True)
     # c_looker = NetLooker(net=model.critic, name='critic')
 
@@ -160,18 +165,17 @@ def train():
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
         if states is not None:
-            a_looker.look(states, suffix='{}_{}_{}'.format(suffix, episode, t))
+            a_looker.look(states, folder=graph_path, suffix='{}_{}_{}'.format(suffix, episode, t))
             actions = model.choose_action(states, noisy=False)
-            next_states, rewards, done, info = env.step(actions)
+            next_states, reward, done, info = env.step(actions)
             # env.render(counter='{}_{}_{}'.format(t, step, episode))
             # states = next_states
 
             t += 1
-            rew += min(rewards)
+            rew += reward
             sr_step.append(float(done))
-            rew_step.append(min(rewards))
-            print('{:>2d} {:>6d}'.format(t, episode), end='\t')
-            print(['{:>+4.2f}'.format(rew) for rew in rewards])
+            rew_step.append(reward)
+            print('{:>2d} {:>6d} {:>+4.2f}'.format(t, episode, reward))
 
         # 如果前个冲突成功解脱，则进入下一个冲突时刻，否则更换新的场景
         if not done:

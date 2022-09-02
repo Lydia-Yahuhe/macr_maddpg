@@ -131,5 +131,5 @@ def load_and_split_data(col='scenarios_big_flow_new', size=None, ratio=0.8):
         if size is not None and count >= size:
             break
 
-    split_size = int(size*ratio)
+    split_size = int(size*ratio) if size is not None else int(count*ratio)
     return scenarios[:split_size], scenarios[split_size:]

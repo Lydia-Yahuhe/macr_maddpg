@@ -21,7 +21,7 @@ def calc_reward(scene):
     else:
         rewards = [-1.0 for _ in conflict_acs]
         solved = False
-    return solved, rewards
+    return solved, min(rewards)
 
 
 class ConflictEnv(gym.Env, ABC):
@@ -34,7 +34,6 @@ class ConflictEnv(gym.Env, ABC):
         self.observation_space = spaces.Box(low=-1.0, high=+1.0, shape=(200,), dtype=np.float64)
 
         print('----------env------------')
-        print('|    total size: {:<6} |'.format(size))
         print('|   split ratio: {:<6.2f} |'.format(ratio))
         print('|    train size: {:<6} |'.format(len(self.train)))
         print('| validate size: {:<6} |'.format(len(self.test)))
@@ -67,8 +66,8 @@ class ConflictEnv(gym.Env, ABC):
             scene = self.scene
 
         next_states = scene.do_step(actions)
-        solved, rewards = calc_reward(scene)
-        return next_states, rewards, solved, {}
+        solved, reward = calc_reward(scene)
+        return next_states, reward, solved, {}
 
     def render(self, mode='human', wait=100, counter=''):
         if self.video_out is None:

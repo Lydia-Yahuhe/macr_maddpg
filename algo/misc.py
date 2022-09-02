@@ -11,17 +11,18 @@ device = th.device("cuda") if th.cuda.is_available() else th.device("cpu")
 BoolTensor = th.BoolTensor
 FloatTensor = th.FloatTensor
 
-root = 'trained/'
-logs_path = root + 'logs/'
-graph_path = root + 'graph/'
-model_path = root + 'model/'
 
-if not os.path.exists(logs_path):
-    os.mkdir(logs_path)
-if not os.path.exists(graph_path):
-    os.mkdir(graph_path)
-if not os.path.exists(model_path):
-    os.mkdir(model_path)
+def get_folder(folder, root='trained'):
+    folder = os.path.join(root, folder)
+
+    log_path = os.path.join(folder, 'logs/')
+    graph_path = os.path.join(folder, 'graph/')
+    model_path = os.path.join(folder, 'model/')
+    os.makedirs(log_path)
+    os.makedirs(graph_path)
+    os.makedirs(model_path)
+
+    return {'log_path': log_path, 'graph_path': graph_path, 'model_path': model_path}
 
 
 def to_torch(np_array):
@@ -40,12 +41,12 @@ def weight_init(m):
         m.bias.data.fill_(0.)
 
 
-def net_visual(dim_input, net, name):
+def net_visual(dim_input, net, save_path):
     xs = [th.randn(*dim).requires_grad_(True) for dim in dim_input]  # 定义一个网络的输入值
     y = net(*xs)  # 获取网络的预测值
     net_vis = make_dot(y, params=dict(list(net.named_parameters()) + [('x', x) for x in xs]))
     net_vis.format = "png"
-    net_vis.directory = graph_path + "{}".format(name)  # 指定文件生成的文件夹
+    net_vis.directory = save_path  # 指定文件生成的文件夹
     net_vis.view()     # 生成文件
 
 

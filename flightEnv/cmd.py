@@ -1,9 +1,6 @@
-import numpy as np
-
 from flightSim.aircraft import AltCmd, HdgCmd, SpdCmd
 
 CmdCount = 6
-# tmp = [20, 7, 20, 9, 20, 7]
 
 
 def int_2_cmd(now: int, idx: list):

@@ -35,7 +35,8 @@ class ConflictScene:
         self.result = False
         self.tracks = {}
 
-        print('---------------------', info['id'], x, A, c_type, limit, advance)
+        print('--------scenario------------', info['id'], x, A, c_type, limit, advance,
+              info['clock'], self.entity.time)
 
     # def initialize(self):
     #     self.agent_set = AircraftAgentSet(other=self.entity)
@@ -115,7 +116,6 @@ class ConflictScene:
                 self.ghost.do_step(duration=self.advance)
             else:
                 self.ghost.do_step(duration=duration)
-
             # print('>>> t2', self.ghost.time)
 
             self.ghost.check_list = []
@@ -125,6 +125,7 @@ class ConflictScene:
                     return None
                 continue
 
+            # print(len(conflicts), end='\t')
             if self.x > 0 and self.c_type == 'conc':
                 ghost = AircraftAgentSet(other=self.ghost)
 
@@ -134,7 +135,7 @@ class ConflictScene:
 
             self.conflicts = conflicts
             self.conflict_acs_total = self.__get_conflict_ac(conflicts)
-            # print(self.conflict_acs_total)
+            # print(len(conflicts), self.conflict_acs_total)
 
             self.conflict_acs = self.conflict_acs_total.pop(0)
             # print(self.conflict_acs, self.conflict_acs_total)
@@ -175,6 +176,7 @@ class ConflictScene:
 
     def do_step(self, actions):
         agent_set = AircraftAgentSet(other=self.agent_set)
+        # print('>>> t3', agent_set.time)
 
         conflict_acs = self.conflict_acs
         now = agent_set.time
@@ -184,15 +186,18 @@ class ConflictScene:
         assign_time = now + self.delta_T
         for i, conflict_ac in enumerate(conflict_acs):
             agent = agent_set.agents[conflict_ac]
+            # print(conflict_ac)
 
             cmd_list = []
             for cmd in int_2_cmd(assign_time, actions[i]):
+                # print('\t\t', cmd)
                 agent.assign_cmd(cmd)
                 cmd_list.append(cmd)
             cmd_info[conflict_ac] = cmd_list
         self.cmd_info = cmd_info
 
         ghost = AircraftAgentSet(other=agent_set)
+        # print('>>> t4', ghost.time)
 
         # 检查动作的解脱效果
         self.tracks, self.result = {}, True
@@ -205,6 +210,7 @@ class ConflictScene:
             if len(conflicts) > 0:
                 self.result = False
                 break
+        # print('>>> t5', ghost.time)
 
         if self.result:
             self.agent_set = agent_set

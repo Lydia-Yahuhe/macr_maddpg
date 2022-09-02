@@ -9,13 +9,8 @@ from algo.memory import ReplayMemory, Experience
 from algo.misc import *
 
 
-def make_exp_id(args):
-    return 'train_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.step_per_epi, args.meta_final, args.a_lr,
-                                                     args.c_lr, args.batch_size, args.A, args.c_type, args.x)
-
-
 class MADDPG:
-    def __init__(self, dim_obs, dim_act, args, record=True, draw_net=False, load=False):
+    def __init__(self, dim_obs, dim_act, args, log_path=None, graph_path=None, load_path=None):
         self.args = args
         self.var = 1.0
 
@@ -30,31 +25,32 @@ class MADDPG:
         self.memory = ReplayMemory(args.memory_length)
         self.c_loss, self.a_loss = [], []
 
-        if record:
-            self.writer = SummaryWriter(logs_path + make_exp_id(args))
+        if log_path is not None:
+            self.writer = SummaryWriter(log_path)
         else:
             self.writer = None
 
-        if draw_net:
+        if graph_path is not None:
             print('Draw the net of Actor and Critic!')
-            net_visual([(1, dim_obs)], self.actor, 'actor')
-            net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic, 'critic')
+            net_visual([(1, dim_obs)], self.actor, graph_path+'actor')
+            net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic, graph_path+'critic')
 
-        if load:
+        if load_path is not None:
             print("Load model successfully!")
-            self.load_model()
+            self.load_model(load_path)
 
-    def load_model(self):
-        actor = th.load(model_path + "actor.pth")
-        critic = th.load(model_path + "critic.pth")
+    def load_model(self, load_path):
+        [path, episode] = load_path
+        actor = th.load(path + "actor_{}.pth".format(episode))
+        critic = th.load(path + "critic_{}.pth".format(episode))
         self.actor.load_state_dict(actor.state_dict())
         self.critic.load_state_dict(critic.state_dict())
         self.actor_target = deepcopy(self.actor)
         self.critic_target = deepcopy(self.critic)
 
-    def save_model(self):
-        th.save(self.actor, model_path + 'actor.pth')
-        th.save(self.critic, model_path + 'critic.pth')
+    def save_model(self, save_path, episode):
+        th.save(self.actor, save_path + 'actor_{}.pth'.format(episode))
+        th.save(self.critic, save_path + 'critic_{}.pth'.format(episode))
 
     def scalars(self, key, value, episode):
         self.writer.add_scalars(key, value, episode)

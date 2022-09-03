@@ -47,8 +47,9 @@ class ConflictEnv(gym.Env, ABC):
 
     def reset(self, change=True):
         if change:
-            idx = np.random.randint(0, len(self.train))
-            self.scene = ConflictScene(self.train[idx], **self.kwargs)
+            info = self.train.pop(0)
+            self.scene = ConflictScene(info, **self.kwargs)
+            self.train.append(info)
 
         return self.scene.next_point()
 
@@ -82,12 +83,8 @@ class ConflictEnv(gym.Env, ABC):
         conflict_info = {'>>> Conflict': str(self.scene.result)}
         for i, c in enumerate(self.scene.conflicts):
             conflict_info['real_' + str(i + 1)] = c.to_string()
-
-        # i = 0
-        # for a0, cs in self.scene.fake_conflicts.items():
-        #     for c in cs:
-        #         conflict_info['fake_' + str(i + 1)] = c.to_string()
-        #         i += 1
+        for i, c in enumerate(self.scene.fake_conflicts):
+            conflict_info['fake_' + str(i + 1)] = c.to_string()
         image = add_texts_on_base_map(conflict_info, image, (750, 80), color=(0, 0, 0))
 
         # 指令信息

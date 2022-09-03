@@ -28,9 +28,8 @@ class ConflictScene:
         self.agent_set = self.entity
         self.ghost = None
 
-        self.conflict_acs_total = []
-        self.conflict_acs = []
-        self.conflicts = []
+        self.conflict_acs_total, self.conflict_acs = [], []
+        self.conflicts, self.fake_conflicts = [], []
         self.cmd_info = {}
         self.result = False
         self.tracks = {}
@@ -58,7 +57,6 @@ class ConflictScene:
             return [conflicts[0].id.split('-')]
 
         check = []
-
         if self.c_type == 'pair':
             conflict_acs = []
             for c in conflicts:
@@ -73,32 +71,44 @@ class ConflictScene:
 
                 if len(two) > 0:
                     conflict_acs.append(two)
-        else:
-            conflict_acs = [[] for _ in range(self.A)]
-            num = int(math.sqrt(self.A))
+            return conflict_acs
+
+        if self.A == 1:
+            conflict_acs = []
             for c in conflicts:
                 [a0, a1] = c.id.split('-')
                 if a0 not in check:
+                    conflict_acs.append(a0)
                     check.append(a0)
-                    r = border_func(int((c.pos0[0] - border[0]) / self.side_length[0]),
-                                    min_v=0, max_v=num - 1, d_type=int)
-                    c = border_func(int((c.pos0[1] - border[2]) / self.side_length[1]),
-                                    min_v=0, max_v=num - 1, d_type=int)
-                    idx = int(r * math.sqrt(self.A) + c)
-                    # print(a0, r, c, idx)
-                    conflict_acs[idx].append(a0)
                 if a1 not in check:
+                    conflict_acs.append(a1)
                     check.append(a1)
-                    r = border_func(int((c.pos1[0] - border[0]) / self.side_length[0]),
-                                    min_v=0, max_v=num - 1, d_type=int)
-                    c = border_func(int((c.pos1[1] - border[2]) / self.side_length[1]),
-                                    min_v=0, max_v=num - 1, d_type=int)
-                    idx = int(r * math.sqrt(self.A) + c)
-                    # print(a1, r, c, idx)
-                    conflict_acs[idx].append(a1)
-            conflict_acs = [lst for lst in conflict_acs if len(lst) > 0]
+            return [conflict_acs]
 
-        return conflict_acs
+        conflict_acs = [[] for _ in range(self.A)]
+        num = int(math.sqrt(self.A))
+        for c in conflicts:
+            [a0, a1] = c.id.split('-')
+            if a0 not in check:
+                check.append(a0)
+                r = border_func(int((c.pos0[0] - border[0]) / self.side_length[0]),
+                                min_v=0, max_v=num - 1, d_type=int)
+                c = border_func(int((c.pos0[1] - border[2]) / self.side_length[1]),
+                                min_v=0, max_v=num - 1, d_type=int)
+                idx = int(r * math.sqrt(self.A) + c)
+                # print(a0, r, c, idx)
+                conflict_acs[idx].append(a0)
+            if a1 not in check:
+                check.append(a1)
+                r = border_func(int((c.pos1[0] - border[0]) / self.side_length[0]),
+                                min_v=0, max_v=num - 1, d_type=int)
+                c = border_func(int((c.pos1[1] - border[2]) / self.side_length[1]),
+                                min_v=0, max_v=num - 1, d_type=int)
+                idx = int(r * math.sqrt(self.A) + c)
+                # print(a1, r, c, idx)
+                conflict_acs[idx].append(a1)
+
+        return [lst for lst in conflict_acs if len(lst) > 0]
 
     def next_point(self):
         if len(self.conflict_acs_total) > 0:
@@ -200,7 +210,7 @@ class ConflictScene:
         # print('>>> t4', ghost.time)
 
         # 检查动作的解脱效果
-        self.tracks, self.result = {}, True
+        self.tracks, self.result, self.fake_conflicts = {}, True, []
         while ghost.time < now + 2 * self.advance:
             self.tracks[ghost.time] = ghost.do_step(duration=5)
             if ghost.time == now + self.advance:
@@ -208,6 +218,7 @@ class ConflictScene:
 
             conflicts = ghost.detect_conflict_list(search=conflict_acs)
             if len(conflicts) > 0:
+                self.fake_conflicts = conflicts
                 self.result = False
                 break
         # print('>>> t5', ghost.time)

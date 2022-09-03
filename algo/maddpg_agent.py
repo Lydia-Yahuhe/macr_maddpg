@@ -1,3 +1,4 @@
+import random
 from copy import deepcopy
 
 from torch.optim import Adam
@@ -126,16 +127,12 @@ class MADDPG:
     def choose_action(self, states, noisy=True):
         states = th.from_numpy(np.stack(states)).float().to(device)
 
-        actions = []
-        for state in states:
-            act = self.actor(state.detach().unsqueeze(0)).squeeze()
-            if noisy:
-                act += th.from_numpy(np.random.randn(act.shape[-1]) * self.var).type(FloatTensor)
-            actions.append(act)
-        actions = th.stack(actions)
-        actions = th.clamp(actions, -1, 1)
+        actions = self.actor(states)
+        if noisy and random.random() <= self.var:
+            actions += th.from_numpy(np.random.uniform(-1, 1, actions.shape)).type(FloatTensor)
+            actions = th.clamp(actions, -1, 1)
 
-        if self.var > 0.05:
-            self.var *= 0.99999
+            if self.var > 0.05:
+                self.var *= 0.99999
 
         return actions.data.cpu().numpy()

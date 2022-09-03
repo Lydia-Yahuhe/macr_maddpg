@@ -43,14 +43,24 @@ class NetLooker:
             if i % 2 != 0 and i != length - 1:
                 continue
 
+            dim_nodes = var.shape[-1]
+
             if count == 0:
                 mode = 'input'
+                string = "{}({})".format(mode, dim_nodes)
             elif count == self.rows - 1:
                 mode = 'output'
+                string = "{}({},{})".format(mode, dim_nodes, 'Tanh')
             else:
                 mode = 'hidden'
+                string = "{}({},{})".format(mode, dim_nodes, 'Relu')
 
-            dim_nodes = var.shape[-1]
+            image = cv2.putText(image,
+                                string,
+                                (self.width // 2, c_start + count * r_interval + 10 * self.radius),
+                                cv2.FONT_HERSHEY_SIMPLEX,
+                                self.width/standard_width*self.ratio, (255.0, 0, 0),
+                                thickness=self.radius // 2)
 
             # 最上层节点圆心与上层边界的距离
             r_start = int(self.width // 2 - (dim_nodes - 1) / 2 * c_interval)
@@ -61,12 +71,6 @@ class NetLooker:
                 coord_list.append(coord)
             link_metrix.append(coord_list)
 
-            string = "{}({})".format(mode, dim_nodes)
-            image = cv2.putText(image, string,
-                                (self.width // 2, c_start + count * r_interval + 10 * self.radius),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                self.width/standard_width*self.ratio, (255.0, 0, 0),
-                                thickness=self.radius // 2)
             count += 1
 
         for i in range(len(var_list) // 2):
@@ -132,7 +136,7 @@ class NetLooker:
         cv2.waitKey(1000)
 
         if folder is not None:
-            cv2.imwrite(folder+'{}_{}.png'.format(self.name, suffix), image)
+            cv2.imwrite(folder+'{}/{}.jpg'.format(self.name, suffix), image)
 
     def close(self):
         cv2.waitKey(1) & 0xFF
@@ -144,23 +148,26 @@ def train():
 
     env = ConflictEnv(x=args.x, A=args.A, c_type=args.c_type)
 
-    graph_path = os.path.join(args.load_path, 'graph/')
-    suffix = 400
+    root_path = 'trained/'+'train_10_0.1_0.0001_0.0001_16_1_conc_10_1662190805134'
+    graph_path = os.path.join(root_path, 'graph/')
+    model_path = os.path.join(root_path, 'model/')
+    suffix = 600
 
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
-                   load_path=[os.path.join(args.load_path, 'model/'), suffix])
+                   load_path=[model_path, suffix])
 
     a_looker = NetLooker(net=model.actor, name='actor', look_weight=True)
     # c_looker = NetLooker(net=model.critic, name='critic')
 
     # 每百步的解脱率、每百回合的解脱率、每回合的步数
     rew_epi, rew_step, sr_step, sr_epi, step_epi = [], [], [], [], []
+    record = []
 
     # 回合数、回合内步数、回合内奖励和、是否更换新的场景
     episode, t, rew, change = 1, 0, 0.0, True
-    while not env.eval_is_over():
+    while not (env.eval_is_over() and change):
         states, done = env.reset_for_eval(change=change), False
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
@@ -183,7 +190,7 @@ def train():
             sr_epi.append(int(states is None))
             step_epi.append(t)
             rew_epi.append(rew)
-            print(episode, states is None, rew, t)
+            record.append([episode, int(states is None), rew, t])
             t, rew = 0, 0.0
             episode += 1
         else:
@@ -191,32 +198,15 @@ def train():
 
     a_looker.close()
 
-    print('----------------------------')
-    print('   sr_step:', np.mean(sr_step))
-    print('sr_episode:', np.mean(sr_epi))
-    print('  rew_step:', np.mean(rew_step))
-    print('   rew_epi:', np.mean(rew_epi))
-    print('  step_epi:', np.mean(step_epi))
-    print('----------------------------')
+    with open(model_path + 'record_{}.csv'.format(suffix), 'w', newline='') as f:
+        f = csv.writer(f)
+        f.writerows(record)
+        f.writerow([np.mean(sr_step), np.mean(sr_epi),
+                    np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)])
+
+        print('   sr_t: {}, sr_e: {}, rew_t: {}, rew_e: {}, step_e: {}'.format(
+            np.mean(sr_step), np.mean(sr_epi),  np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)))
 
 
-"""
-Episode: <=3000
-----------------------------
-   sr_step: 0.5897435897435898
-sr_episode: 0.0
-  rew_step: -0.04852887233002828
-   rew_epi: -0.11828912630444392
-  step_epi: 2.4375
-----------------------------
-Episode: 4000
-----------------------------
-   sr_step: 0.6341463414634146
-sr_episode: 0.0
-  rew_step: -0.02853248833065353
-   rew_epi: -0.13031086259831984
-  step_epi: 2.6666666666666665
-----------------------------
-"""
 if __name__ == '__main__':
     train()

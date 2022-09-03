@@ -25,12 +25,12 @@ def args_parse():
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 4
     parser.add_argument('--batch_size', default=16, type=int)  # 5
 
-    parser.add_argument('--A', default=9, type=int)  # 6
-    parser.add_argument('--c_type', default='pair', type=str)  # 7
-    parser.add_argument('--x', default=60, type=int)  # 8
+    parser.add_argument('--A', default=1, type=int)  # 6
+    parser.add_argument('--c_type', default='conc', type=str)  # 7
+    parser.add_argument('--x', default=10, type=int)  # 8
 
-    parser.add_argument("--load_path", default='trained/train_10_0.1_0.0001_0.0001_16_9_pair_60_1662123081776', type=str)
-    parser.add_argument("--save_interval", default=1000, type=int)
+    parser.add_argument("--load_path", default=None, type=str)
+    parser.add_argument("--save_interval", default=100, type=int)
     parser.add_argument('--episode_before_train', default=100, type=int)
 
     return parser.parse_args()
@@ -52,7 +52,7 @@ def train():
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
-                   # graph_path=path['graph_path'],
+                   graph_path=path['graph_path'],
                    log_path=path['log_path'],
                    load_path=args.load_path)
 
@@ -83,7 +83,7 @@ def train():
             rew += reward
             sr_step.append(float(done))
             rew_step.append(reward)
-            print('{:>2d} {:>6d} {:>6d} {:>+4.2f}'.format(t, step, episode, reward))
+            print('[{:>2d} {:>6d} {:>6d} {:>+4.2f}]'.format(t, step, episode, reward))
 
             # 开始更新网络参数
             if episode >= args.episode_before_train:

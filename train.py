@@ -25,7 +25,7 @@ def args_parse():
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 4
     parser.add_argument('--batch_size', default=16, type=int)  # 5
 
-    parser.add_argument('--A', default=1, type=int)  # 6
+    parser.add_argument('--A', default=4, type=int)  # 6
     parser.add_argument('--c_type', default='conc', type=str)  # 7
     parser.add_argument('--x', default=10, type=int)  # 8
 
@@ -52,7 +52,7 @@ def train():
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
-                   graph_path=path['graph_path'],
+                   # graph_path=path['graph_path'],
                    log_path=path['log_path'],
                    load_path=args.load_path)
 
@@ -68,7 +68,7 @@ def train():
         if states is not None:
             actions = model.choose_action(states, noisy=True)
             next_states, reward, done, info = env.step(actions)
-            # env.render(counter='{}_{}_{}'.format(t, step, episode))
+            env.render(counter='{}_{}_{}'.format(t, step, episode))
 
             # replay buffer R
             obs = th.from_numpy(np.stack(states)).float().to(device)

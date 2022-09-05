@@ -10,6 +10,7 @@ from flightSim.utils import *
 
 border_origin = [109.3, 116, 29, 33.5]
 border = [109, 120, 26, 34]
+global_bbox = (border[0], border[2], 0.0, border[1], border[3], 12000.0)
 scale = 100
 width, length = resolution(border, scale)
 channel = 3

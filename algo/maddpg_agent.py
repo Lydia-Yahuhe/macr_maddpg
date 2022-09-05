@@ -28,6 +28,10 @@ class MADDPG:
 
         if log_path is not None:
             self.writer = SummaryWriter(log_path)
+            # print('Draw the net of Actor and Critic!')
+            # self.writer.add_graph(self.actor, input_to_model=th.rand(1, dim_obs))
+            # self.writer.add_graph(self.critic, input_to_model=(th.rand(1, 3, dim_obs),
+            #                                                    th.rand(1, 3, dim_act)))
         else:
             self.writer = None
 

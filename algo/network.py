@@ -4,11 +4,11 @@ import torch.nn.functional as F
 
 
 class Critic(nn.Module):
-    def __init__(self, dim_observation, dim_action):
+    def __init__(self, dim_obs, dim_act):
         super(Critic, self).__init__()
         hidden_size = self.hidden_size = 64
         self.num_layers = 2
-        self.lstm_critic = nn.LSTM(dim_observation+dim_action, hidden_size, self.num_layers,
+        self.lstm_critic = nn.LSTM(dim_obs+dim_act, hidden_size, self.num_layers,
                                    batch_first=True, bidirectional=True)
         self.fc1 = nn.Linear(hidden_size*4, hidden_size*2)
         self.fc2 = nn.Linear(hidden_size*2, hidden_size)

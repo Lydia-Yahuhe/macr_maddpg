@@ -6,7 +6,7 @@ from flightEnv.agentSet import AircraftAgentSet
 from flightEnv.cmd import int_2_cmd
 
 from flightSim.utils import make_bbox, position_in_bbox, get_side_length, border_func
-from flightSim.render import border_origin as border
+from flightSim.render import border_origin as border, global_bbox
 
 duration = 1
 
@@ -159,7 +159,7 @@ class ConflictScene:
         agents = a_set.agents
         r_tree, ac_en = a_set.build_rt_index()
 
-        states = []
+        states_dict = {}
         for conflict_ac in self.conflict_acs:
             a0 = agents[conflict_ac]
             bbox = make_bbox(a0.position, ext=(1.0, 1.0, 1500.0))
@@ -177,12 +177,12 @@ class ConflictScene:
 
             state = [[0.0 for _ in range(4)] for _ in range(length)]
             j = 0
-            for key in sorted(state_dict):
+            for key in sorted(state_dict.keys()):
                 state[min(length - 1, j)] = state_dict[key]
                 j += 1
-            states.append(np.concatenate(state))
+            states_dict[position_in_bbox(global_bbox, a0.position)] = np.concatenate(state)
 
-        return states
+        return [states_dict[key] for key in sorted(states_dict.keys())]
 
     def do_step(self, actions):
         agent_set = AircraftAgentSet(other=self.agent_set)

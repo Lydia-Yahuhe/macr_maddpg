@@ -132,16 +132,16 @@ def get_bbox_2d(point, ext=(0.0, 0.0)):
 
 
 def position_in_bbox(bbox, p, delta=(0.05, 0.05, 300)):
-    x = int((p[0] - bbox[0]) / delta[0])
-    y = int((p[1] - bbox[1]) / delta[1])
-    z = int((p[2] - bbox[2]) / delta[2])
-
     x_size = int((bbox[3] - bbox[0]) / delta[0])
     y_size = int((bbox[4] - bbox[1]) / delta[1])
     z_size = int((bbox[5] - bbox[2]) / delta[2])
 
-    if x > x_size or y > y_size or z > z_size:
-        return int(1e6)
+    x = border_func((p[0] - bbox[0]) / delta[0], min_v=0, max_v=x_size-1, d_type=int)
+    y = border_func((p[1] - bbox[1]) / delta[1], min_v=0, max_v=y_size-1, d_type=int)
+    z = border_func((p[2] - bbox[2]) / delta[2], min_v=0, max_v=z_size-1, d_type=int)
+
+    # print('position_in_bbox:', x, y, z, x_size, y_size, z_size, bbox)
+
     return x + y * x_size + z * x_size * y_size
 
 

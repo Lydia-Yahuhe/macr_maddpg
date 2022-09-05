@@ -136,7 +136,7 @@ class NetLooker:
         cv2.waitKey(1000)
 
         if folder is not None:
-            cv2.imwrite(folder+'{}/{}.jpg'.format(self.name, suffix), image)
+            cv2.imwrite(folder+'{}/{}.png'.format(self.name, suffix), image)
 
     def close(self):
         cv2.waitKey(1) & 0xFF
@@ -146,12 +146,12 @@ class NetLooker:
 def train():
     args = args_parse()
 
-    env = ConflictEnv(x=args.x, A=args.A, c_type=args.c_type)
+    env = ConflictEnv(ratio=1.0, x=args.x, A=args.A, c_type=args.c_type)
 
-    root_path = 'trained/'+'train_10_0.1_0.0001_0.0001_16_1_conc_10_1662190805134'
+    root_path = 'trained/'+'train_10_0.0001_0.0001_16_1_pair_0_1_1662371295761'
     graph_path = os.path.join(root_path, 'graph/')
     model_path = os.path.join(root_path, 'model/')
-    suffix = 600
+    suffix = 100
 
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
@@ -172,7 +172,7 @@ def train():
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
         if states is not None:
-            a_looker.look(states, folder=graph_path, suffix='{}_{}_{}'.format(suffix, episode, t))
+            # a_looker.look(states, folder=graph_path, suffix='{}_{}_{}'.format(suffix, episode, t))
             actions = model.choose_action(states, noisy=False)
             next_states, reward, done, info = env.step(actions)
             # env.render(counter='{}_{}_{}'.format(t, step, episode))
@@ -198,13 +198,13 @@ def train():
 
     a_looker.close()
 
-    with open(model_path + 'record_{}.csv'.format(suffix), 'w', newline='') as f:
+    with open(model_path + 'record.csv', 'a+', newline='') as f:
         f = csv.writer(f)
         f.writerows(record)
         f.writerow([np.mean(sr_step), np.mean(sr_epi),
                     np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)])
 
-        print('   sr_t: {}, sr_e: {}, rew_t: {}, rew_e: {}, step_e: {}'.format(
+        print('sr_t: {}, sr_e: {}, rew_t: {}, rew_e: {}, step_e: {}'.format(
             np.mean(sr_step), np.mean(sr_epi),  np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)))
 
 

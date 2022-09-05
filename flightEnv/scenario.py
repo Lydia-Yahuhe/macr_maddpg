@@ -6,7 +6,7 @@ from flightEnv.agentSet import AircraftAgentSet
 from flightEnv.cmd import int_2_cmd
 
 from flightSim.utils import make_bbox, position_in_bbox, get_side_length, border_func
-from flightSim.render import border_origin as border, global_bbox
+from flightSim.render import border_origin as border, make_closest_bbox
 
 duration = 1
 
@@ -153,36 +153,47 @@ class ConflictScene:
             return self.get_states(a_set0=self.agent_set, a_set1=self.ghost)
 
     def get_states(self, a_set0, a_set1):
-        return np.concatenate((self.__get_states(a_set=a_set0), self.__get_states(a_set=a_set1)), axis=1)
+        return np.concatenate((self.__get_states(a_set=a_set0),
+                               self.__get_states(a_set=a_set1)),
+                              axis=1)
 
     def __get_states(self, a_set, length=25):
         agents = a_set.agents
         r_tree, ac_en = a_set.build_rt_index()
 
+        closest_bbox = make_closest_bbox([agents[conflict_ac].position for conflict_ac in self.conflict_acs])
+
         states_dict = {}
         for conflict_ac in self.conflict_acs:
             a0 = agents[conflict_ac]
-            bbox = make_bbox(a0.position, ext=(1.0, 1.0, 1500.0))
+            pos0 = a0.position
+            bbox = make_bbox(pos0, ext=(1.0, 1.0, 1500.0))
             status0 = a0.get_x_data()
 
             state_dict = {}
             for i in r_tree.intersection(bbox):
                 a1 = agents[ac_en[i]]
                 status = a1.get_x_data()
-                ele = [2 * float(a1.id in self.conflict_acs) - 1.0,
-                       status[0] - status0[0],
-                       status[1] - status0[1],
-                       (status[2] - status0[2]) / 1500.0]
-                state_dict[position_in_bbox(bbox, status)] = ele
+                state_dict[position_in_bbox(bbox, status)] = [2 * float(a1.id in self.conflict_acs) - 1.0,
+                                                              status[0] - status0[0],
+                                                              status[1] - status0[1],
+                                                              (status[2] - status0[2]) / 1500.0]
 
             state = [[0.0 for _ in range(4)] for _ in range(length)]
             j = 0
             for key in sorted(state_dict.keys()):
                 state[min(length - 1, j)] = state_dict[key]
                 j += 1
-            states_dict[position_in_bbox(global_bbox, a0.position)] = np.concatenate(state)
+            states_dict[position_in_bbox(closest_bbox, pos0)] = [conflict_ac, np.concatenate(state)]
 
-        return [states_dict[key] for key in sorted(states_dict.keys())]
+        states, conflict_acs = [], []
+        for key in sorted(states_dict.keys()):
+            [conflict_ac, state] = states_dict[key]
+            states.append(state)
+            conflict_acs.append(conflict_ac)
+
+        self.conflict_acs = conflict_acs
+        return states
 
     def do_step(self, actions):
         agent_set = AircraftAgentSet(other=self.agent_set)

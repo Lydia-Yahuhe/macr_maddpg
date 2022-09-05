@@ -123,6 +123,17 @@ def make_bbox(pos, ext=(0, 0, 0)):
             pos[0] + ext[0], pos[1] + ext[1], pos[2] + ext[2])
 
 
+def make_closest_bbox(points, ext=(0.1, 0.1, 300)):
+    lng_lst, lat_lst, alt_lst = [], [], []
+    for p in points:
+        lng_lst.append(p[0])
+        lat_lst.append(p[1])
+        alt_lst.append(p[2])
+
+    return (min(lng_lst)-ext[0], min(lat_lst)-ext[1], min(alt_lst)-ext[2],
+            max(lng_lst)+ext[0], max(lat_lst)+ext[1], max(alt_lst)+ext[2])
+
+
 def get_bbox_2d(point, ext=(0.0, 0.0)):
     min_lng, max_lng = point[0] - ext[0], point[0] + ext[0]
     min_lat, max_lat = point[1] - ext[1], point[1] + ext[1]
@@ -131,16 +142,17 @@ def get_bbox_2d(point, ext=(0.0, 0.0)):
             (max_lng, min_lat), (min_lng, min_lat)]
 
 
-def position_in_bbox(bbox, p, delta=(0.05, 0.05, 300)):
+def position_in_bbox(bbox, p, delta=(0.05, 0.05, 150)):
     x_size = int((bbox[3] - bbox[0]) / delta[0])
     y_size = int((bbox[4] - bbox[1]) / delta[1])
     z_size = int((bbox[5] - bbox[2]) / delta[2])
 
-    x = border_func((p[0] - bbox[0]) / delta[0], min_v=0, max_v=x_size-1, d_type=int)
-    y = border_func((p[1] - bbox[1]) / delta[1], min_v=0, max_v=y_size-1, d_type=int)
-    z = border_func((p[2] - bbox[2]) / delta[2], min_v=0, max_v=z_size-1, d_type=int)
+    x = int((p[0] - bbox[0]) / delta[0])
+    y = int((p[1] - bbox[1]) / delta[1])
+    z = int((p[2] - bbox[2]) / delta[2])
 
-    # print('position_in_bbox:', x, y, z, x_size, y_size, z_size, bbox)
+    if x >= x_size or y >= y_size or z >= z_size:
+        return -1
 
     return x + y * x_size + z * x_size * y_size
 
@@ -300,5 +312,4 @@ def convert_coord_to_pixel(objects, border, scale):
 
 
 def convert_km_to_pixel_number(km, scale=100):
-    degree = km / 111
-    return int(degree * scale)
+    return int(km / 111 * scale)

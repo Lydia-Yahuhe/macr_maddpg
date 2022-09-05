@@ -86,7 +86,7 @@ def load_data_set():
 routings = load_data_set().routings
 
 
-def load_and_split_data(col='scenarios_big_flow_new', size=None, ratio=0.8):
+def load_and_split_data(col='scenarios_big_flow_new', size=None, ratio=0.8, density=1):
     data_set = load_data_set()
     route_dict = data_set.routings
 
@@ -104,8 +104,8 @@ def load_and_split_data(col='scenarios_big_flow_new', size=None, ratio=0.8):
 
         fpl_list, candi = [], {}
         for i, fpl in enumerate(info['fpl_list']):
-            # if i % 3 == 0 and fpl['id'] not in conflict_acs:
-            #     continue
+            if i % density != 0 and fpl['id'] not in conflict_acs:
+                continue
 
             # routing
             routing, section = route_dict[fpl['routing']], fpl['other']

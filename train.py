@@ -10,24 +10,25 @@ from algo.misc import *
 def args_parse():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--max_episodes', default=int(1e5), type=int)
+    parser.add_argument('--max_episodes', default=int(1e3), type=int)
     parser.add_argument('--memory_length', default=int(1e4), type=int)
     parser.add_argument('--max_steps', default=int(1e6), type=int)
 
     parser.add_argument('--inner_iter', help='meta-learning parameter', default=10, type=int)  # 1
     parser.add_argument('--meta-step-size', help='meta-training step size', default=1.0, type=float)
-    parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.1, type=float)  # 2
+    parser.add_argument('--meta-final', help='meta-training step size by the end', default=0.1, type=float)
 
     parser.add_argument('--tau', default=0.001, type=float)
     parser.add_argument('--gamma', default=0.0, type=float)
     parser.add_argument('--seed', default=777, type=int)
-    parser.add_argument('--a_lr', default=0.0001, type=float)  # 3
-    parser.add_argument('--c_lr', default=0.0001, type=float)  # 4
-    parser.add_argument('--batch_size', default=16, type=int)  # 5
+    parser.add_argument('--a_lr', default=0.0001, type=float)  # 2
+    parser.add_argument('--c_lr', default=0.0001, type=float)  # 3
+    parser.add_argument('--batch_size', default=16, type=int)  # 4
 
-    parser.add_argument('--A', default=4, type=int)  # 6
-    parser.add_argument('--c_type', default='conc', type=str)  # 7
-    parser.add_argument('--x', default=10, type=int)  # 8
+    parser.add_argument('--x', default=0, type=int)  # 7
+    parser.add_argument('--A', default=1, type=int)  # 5
+    parser.add_argument('--c_type', default='conc', type=str)  # 6
+    parser.add_argument('--density', default=1, type=float)  # 8
 
     parser.add_argument("--load_path", default=None, type=str)
     parser.add_argument("--save_interval", default=100, type=int)
@@ -37,9 +38,9 @@ def args_parse():
 
 
 def make_exp_id(args):
-    return 'train_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.meta_final,
-                                                     args.a_lr, args.c_lr,  args.batch_size,
-                                                     args.A, args.c_type, args.x, int(round(time.time() * 1000)))
+    return 'train_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.a_lr, args.c_lr, args.batch_size,
+                                                     args.A, args.c_type, args.x, args.density,
+                                                     int(round(time.time() * 1000)))
 
 
 def train():
@@ -47,7 +48,7 @@ def train():
     # th.manual_seed(args.seed)
     path = get_folder(make_exp_id(args))
 
-    env = ConflictEnv(x=args.x, A=args.A, c_type=args.c_type)
+    env = ConflictEnv(density=args.density, x=args.x, A=args.A, c_type=args.c_type)
 
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
@@ -68,7 +69,7 @@ def train():
         if states is not None:
             actions = model.choose_action(states, noisy=True)
             next_states, reward, done, info = env.step(actions)
-            env.render(counter='{}_{}_{}'.format(t, step, episode))
+            # env.render(counter='{}_{}_{}'.format(t, step, episode))
 
             # replay buffer R
             obs = th.from_numpy(np.stack(states)).float().to(device)

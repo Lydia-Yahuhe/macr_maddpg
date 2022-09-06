@@ -14,15 +14,21 @@ FloatTensor = th.FloatTensor
 
 def get_folder(folder, root='trained'):
     folder = os.path.join(root, folder)
+    if os.path.exists(folder):
+        raise FileExistsError
 
     log_path = os.path.join(folder, 'logs/')
     graph_path = os.path.join(folder, 'graph/')
     model_path = os.path.join(folder, 'model/')
+
     os.makedirs(log_path)
     os.makedirs(graph_path)
     os.makedirs(model_path)
 
-    return {'log_path': log_path, 'graph_path': graph_path, 'model_path': model_path}
+    return {'folder': folder,
+            'log_path': log_path,
+            'graph_path': graph_path,
+            'model_path': model_path}
 
 
 def to_torch(np_array):
@@ -41,13 +47,11 @@ def weight_init(m):
         m.bias.data.fill_(0.)
 
 
-def net_visual(dim_input, net, save_path):
+def net_visual(dim_input, net, **kwargs):
     xs = [th.randn(*dim).requires_grad_(True) for dim in dim_input]  # 定义一个网络的输入值
     y = net(*xs)  # 获取网络的预测值
     net_vis = make_dot(y, params=dict(list(net.named_parameters()) + [('x', x) for x in xs]))
-    net_vis.format = "png"
-    net_vis.directory = save_path  # 指定文件生成的文件夹
-    net_vis.view()     # 生成文件
+    net_vis.render(**kwargs)     # 生成文件
 
 
 def soft_update(target, source, t):

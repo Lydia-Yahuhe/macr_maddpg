@@ -91,20 +91,20 @@ class ConflictScene:
             [a0, a1] = c.id.split('-')
             if a0 not in check:
                 check.append(a0)
-                r = border_func(int((c.pos0[0] - border[0]) / self.side_length[0]),
+                i = border_func(int((c.pos0[0] - border[0]) / self.side_length[0]),
                                 min_v=0, max_v=num - 1, d_type=int)
-                c = border_func(int((c.pos0[1] - border[2]) / self.side_length[1]),
+                j = border_func(int((c.pos0[1] - border[2]) / self.side_length[1]),
                                 min_v=0, max_v=num - 1, d_type=int)
-                idx = int(r * math.sqrt(self.A) + c)
+                idx = int(i * math.sqrt(self.A) + j)
                 # print(a0, r, c, idx)
                 conflict_acs[idx].append(a0)
             if a1 not in check:
                 check.append(a1)
-                r = border_func(int((c.pos1[0] - border[0]) / self.side_length[0]),
+                i = border_func(int((c.pos1[0] - border[0]) / self.side_length[0]),
                                 min_v=0, max_v=num - 1, d_type=int)
-                c = border_func(int((c.pos1[1] - border[2]) / self.side_length[1]),
+                j = border_func(int((c.pos1[1] - border[2]) / self.side_length[1]),
                                 min_v=0, max_v=num - 1, d_type=int)
-                idx = int(r * math.sqrt(self.A) + c)
+                idx = int(i * math.sqrt(self.A) + j)
                 # print(a1, r, c, idx)
                 conflict_acs[idx].append(a1)
 

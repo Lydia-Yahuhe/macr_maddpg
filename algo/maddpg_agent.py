@@ -30,15 +30,16 @@ class MADDPG:
             self.writer = SummaryWriter(log_path)
             # print('Draw the net of Actor and Critic!')
             # self.writer.add_graph(self.actor, input_to_model=th.rand(1, dim_obs))
-            # self.writer.add_graph(self.critic, input_to_model=(th.rand(1, 3, dim_obs),
-            #                                                    th.rand(1, 3, dim_act)))
+            # self.writer.add_graph(self.critic, input_to_model=(th.rand(1, 3, dim_obs), th.rand(1, 3, dim_act)))
         else:
             self.writer = None
 
         if graph_path is not None:
             print('Draw the net of Actor and Critic!')
-            net_visual([(1, dim_obs)], self.actor, graph_path+'actor')
-            net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic, graph_path+'critic')
+            net_visual([(1, dim_obs)], self.actor,
+                       filename='actor', directory=graph_path, format='png')
+            net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic,
+                       filename='critic', directory=graph_path, format='png')
 
         if load_path is not None:
             print("Load model successfully!")

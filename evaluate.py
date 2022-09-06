@@ -1,7 +1,5 @@
 import csv
-import time
 from copy import deepcopy
-
 import cv2
 
 from train import *
@@ -145,18 +143,14 @@ class NetLooker:
 
 def train():
     args = args_parse()
-
+    path = get_folder(make_exp_id(args))
     env = ConflictEnv(ratio=1.0, x=args.x, A=args.A, c_type=args.c_type)
 
-    root_path = 'trained/'+'train_10_0.0001_0.0001_16_1_pair_0_1_1662371295761'
-    graph_path = os.path.join(root_path, 'graph/')
-    model_path = os.path.join(root_path, 'model/')
-    suffix = 100
-
+    suffix = 1000
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
-                   load_path=[model_path, suffix])
+                   load_path=[path['model_path'], suffix])
 
     a_looker = NetLooker(net=model.actor, name='actor', look_weight=True)
     # c_looker = NetLooker(net=model.critic, name='critic')
@@ -190,7 +184,7 @@ def train():
             sr_epi.append(int(states is None))
             step_epi.append(t)
             rew_epi.append(rew)
-            record.append([episode, int(states is None), rew, t])
+            record.append([episode, int(states is None), rew, t, t-1])
             t, rew = 0, 0.0
             episode += 1
         else:
@@ -198,14 +192,10 @@ def train():
 
     a_looker.close()
 
-    with open(model_path + 'record.csv', 'a+', newline='') as f:
+    with open(path['folder']+'record_{}.csv'.format(suffix), 'w', newline='') as f:
         f = csv.writer(f)
         f.writerows(record)
-        f.writerow([np.mean(sr_step), np.mean(sr_epi),
-                    np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)])
-
-        print('sr_t: {}, sr_e: {}, rew_t: {}, rew_e: {}, step_e: {}'.format(
-            np.mean(sr_step), np.mean(sr_epi),  np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)))
+        f.writerow([np.mean(sr_step), np.mean(sr_epi),  np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)])
 
 
 if __name__ == '__main__':

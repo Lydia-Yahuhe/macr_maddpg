@@ -22,7 +22,7 @@ def args_parse():
     parser.add_argument('--seed', default=777, type=int)
     parser.add_argument('--a_lr', default=0.0001, type=float)  # 2
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 3
-    parser.add_argument('--batch_size', default=256, type=int)  # 4
+    parser.add_argument('--batch_size', default=32, type=int)  # 4
 
     parser.add_argument('--x', default=0, type=int)  # 7
     parser.add_argument('--A', default=1, type=int)  # 5
@@ -31,7 +31,7 @@ def args_parse():
 
     parser.add_argument("--load_path", default=None, type=str)
     parser.add_argument("--save_interval", default=1000, type=int)
-    parser.add_argument('--episode_before_train', default=1000, type=int)
+    parser.add_argument('--episode_before_train', default=100, type=int)
 
     return parser.parse_args()
 
@@ -46,7 +46,8 @@ def train():
     # th.manual_seed(args.seed)
     path = get_folder(make_exp_id(args))
 
-    env = ConflictEnv(density=args.density, x=args.x, A=args.A, c_type=args.c_type)
+    env = ConflictEnv(size=1, ratio=1.0,
+                      density=args.density, x=args.x, A=args.A, c_type=args.c_type)
 
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,

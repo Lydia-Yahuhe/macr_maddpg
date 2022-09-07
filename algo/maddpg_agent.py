@@ -134,7 +134,7 @@ class MADDPG:
 
         actions = self.actor(states)
         if noisy and random.random() <= self.var:
-            actions += th.from_numpy(np.random.uniform(-1, 1, actions.shape)).type(FloatTensor)
+            actions += th.randn(actions.shape).type(FloatTensor)
             actions = th.clamp(actions, -1, 1)
 
             if self.var > 0.05:

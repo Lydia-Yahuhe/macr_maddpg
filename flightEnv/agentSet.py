@@ -1,9 +1,13 @@
 from __future__ import annotations
+
+import csv
+
+import numpy as np
 from rtree import index
 
 from flightSim.model import Conflict
 from flightSim.aircraft import AircraftAgent
-from flightSim.utils import make_bbox, distance
+from flightSim.utils import make_bbox, distance, position_in_bbox
 from flightSim.visual import save_to_kml
 
 
@@ -38,9 +42,7 @@ class AircraftAgentSet:
         for t in range(duration):
             clock = now + t + 1
 
-            agent_id_candi = []
-            agent_id_en = []
-            tracks = []
+            agent_id_candi, agent_id_en, tracks = [], [], []
             for agent_id in self.__pre_do_step(clock):
                 agent = self.agents[agent_id]
 
@@ -58,12 +60,53 @@ class AircraftAgentSet:
         return tracks
 
     def build_rt_index(self, ext=(0.0, 0.0, 0.0)):
+        agents = self.agents
         idx = index.Index(properties=index.Property(dimension=3))
 
         for i, a_id in enumerate(self.agent_id_en):
-            idx.insert(i, make_bbox(self.agents[a_id].position, ext=ext))
+            idx.insert(i, make_bbox(agents[a_id].position, ext=ext))
 
         return idx, self.agent_id_en
+
+    def get_states(self, conflict_acs, length=25):
+        agents = self.agents
+        r_tree, ac_en = self.build_rt_index()
+
+        states = []
+        for conflict_ac in conflict_acs:
+            a0 = agents[conflict_ac]
+            pos0 = a0.position
+            bbox = make_bbox(pos0, ext=(1.0, 1.0, 1500.0))
+
+            state_dict = {}
+            for i in r_tree.intersection(bbox):
+                a1 = agents[ac_en[i]]
+                pos1 = a1.position
+
+                key = position_in_bbox(bbox, pos1)
+                state_dict[key] = [
+                    2 * float(a1.id in conflict_acs) - 1.0,
+                    pos1[0] - pos0[0],
+                    pos1[1] - pos0[1],
+                    (pos1[2] - pos0[2]) / 1500.0
+                ]
+
+            if len(state_dict) <= length:
+                state = [[0.0 for _ in range(4)] for _ in range(length)]
+                j = 0
+                for key in sorted(state_dict.keys()):
+                    state[j] = state_dict[key]
+                    j += 1
+            else:
+                state = [state_dict[key] for key in sorted(state_dict.keys())]
+                delta = len(state) - length
+                if delta % 2 == 0:
+                    state = state[int(delta/2):-int(delta/2)]
+                else:
+                    state = state[int((delta-1)/2):-int((delta+1)/2)]
+
+            states.append(np.concatenate(state))
+        return states
 
     def detect_conflict_list(self, search=None):
         agent_id_en = self.agent_id_en
@@ -106,17 +149,17 @@ class AircraftAgentSet:
 
         return conflicts
 
-    def visual(self, save_path='agentSet', limit=None):
-        tracks_real = {}
-        tracks_plan = {}
-        for a_id, agent in self.agents.items():
-            if not agent.is_enroute():
-                continue
-
-            if limit is not None and a_id not in limit:
-                continue
-
-            tracks_real[a_id] = [tuple(track[:3]) for track in agent.tracks.values()]
-            tracks_plan[a_id] = [(point.location.lng, point.location.lat, 8100.0)
-                                 for point in agent.fpl.routing.waypointList]
-        save_to_kml(tracks_real, tracks_plan, save_path=save_path)
+    # def visual(self, save_path='agentSet', limit=None):
+    #     tracks_real = {}
+    #     tracks_plan = {}
+    #     for a_id, agent in self.agents.items():
+    #         if not agent.is_enroute():
+    #             continue
+    #
+    #         if limit is not None and a_id not in limit:
+    #             continue
+    #
+    #         tracks_real[a_id] = [tuple(track[:3]) for track in agent.tracks.values()]
+    #         tracks_plan[a_id] = [(point.location.lng, point.location.lat, 8100.0)
+    #                              for point in agent.fpl.routing.waypointList]
+    #     save_to_kml(tracks_real, tracks_plan, save_path=save_path)

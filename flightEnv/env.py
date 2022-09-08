@@ -16,12 +16,9 @@ def calc_reward(scene):
     conflict_acs = scene.conflict_acs
 
     if scene.result:
-        rewards = rew_for_cmd(conflict_acs, scene.cmd_info)
-        solved = True
-    else:
-        rewards = [-1.0 for _ in conflict_acs]
-        solved = False
-    return solved, min(rewards)
+        return True, sum(rew_for_cmd(conflict_acs, scene.cmd_info))
+
+    return False, sum([-1.0 for _ in conflict_acs])
 
 
 class ConflictEnv(gym.Env, ABC):

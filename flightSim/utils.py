@@ -16,6 +16,14 @@ def border_func(x, min_v=-1.0, max_v=1.0, d_type=float):
     return d_type(min(max(x, min_v), max_v))
 
 
+def in_which_box(pos, border, side_length, A):
+    num = int(math.sqrt(A))
+
+    i = border_func((pos[0] - border[0]) / side_length[0], min_v=0, max_v=num - 1, d_type=int)
+    j = border_func((pos[1] - border[2]) / side_length[1], min_v=0, max_v=num - 1, d_type=int)
+    return int(i * math.sqrt(A) + j)
+
+
 def distance_point2d(d0, d1):
     lng0 = radians(d0.lng)
     lat0 = radians(d0.lat)

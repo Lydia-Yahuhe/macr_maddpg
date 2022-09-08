@@ -4,6 +4,7 @@ from rtree import index
 from flightSim.model import Conflict
 from flightSim.aircraft import AircraftAgent
 from flightSim.utils import make_bbox, distance
+from flightSim.visual import save_to_kml
 
 
 class AircraftAgentSet:
@@ -78,6 +79,9 @@ class AircraftAgentSet:
         conflicts, check_list = [], []
         for a0_id in search:
             a0 = self.agents[a0_id]
+            if not a0.is_enroute():
+                continue
+
             pos0 = a0.position
             bbox = make_bbox(pos0, (0.1, 0.1, 299))
 
@@ -101,3 +105,18 @@ class AircraftAgentSet:
                 check_list.append(backward_str)
 
         return conflicts
+
+    def visual(self, save_path='agentSet', limit=None):
+        tracks_real = {}
+        tracks_plan = {}
+        for a_id, agent in self.agents.items():
+            if not agent.is_enroute():
+                continue
+
+            if limit is not None and a_id not in limit:
+                continue
+
+            tracks_real[a_id] = [tuple(track[:3]) for track in agent.tracks.values()]
+            tracks_plan[a_id] = [(point.location.lng, point.location.lat, 8100.0)
+                                 for point in agent.fpl.routing.waypointList]
+        save_to_kml(tracks_real, tracks_plan, save_path=save_path)

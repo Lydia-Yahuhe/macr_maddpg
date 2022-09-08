@@ -17,7 +17,7 @@ class AircraftAgent:
         self.profile = FlightProfile()
 
         self.fpl = fpl
-        # self.tracks = {}
+        self.tracks = {}
 
     def is_enroute(self):
         return self.status.is_enroute()
@@ -56,9 +56,9 @@ class AircraftAgent:
             reset_profile_with_fpl(profile, self.fpl)
 
         # 记录轨迹
-        # if self.is_enroute():
-        #     if now % interval == 0:
-        #         self.tracks[now] = self.get_x_data()
+        if self.is_enroute():
+            if now % interval == 0:
+                self.tracks[now] = self.get_x_data()
         return self.is_finished()
 
     def assign_cmd(self, cmd):
@@ -77,6 +77,6 @@ class AircraftAgent:
         other.control.set(self.control)
         other.status.set(self.status)
         other.profile.set(self.profile)
-        # other.tracks = {key: value[:] for key, value in self.tracks.items()}
+        other.tracks = {key: value[:] for key, value in self.tracks.items()}
         return other
 

@@ -134,7 +134,7 @@ class NetLooker:
         cv2.waitKey(1000)
 
         if folder is not None:
-            cv2.imwrite(folder+'{}/{}.png'.format(self.name, suffix), image)
+            cv2.imwrite(folder+'{}_{}.png'.format(self.name, suffix), image)
 
     def close(self):
         cv2.waitKey(1) & 0xFF
@@ -143,10 +143,11 @@ class NetLooker:
 
 def train():
     args = args_parse()
-    path = get_folder(make_exp_id(args))
-    env = ConflictEnv(ratio=1.0, x=args.x, A=args.A, c_type=args.c_type)
+    path = get_folder(make_exp_id(args), allow_exist=True)
+    env = ConflictEnv(size=1, ratio=1.0,
+                      x=args.x, A=args.A, c_type=args.c_type)
 
-    suffix = 1000
+    suffix = 10000
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
@@ -166,10 +167,13 @@ def train():
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
         if states is not None:
-            # a_looker.look(states, folder=graph_path, suffix='{}_{}_{}'.format(suffix, episode, t))
-            actions = model.choose_action(states, noisy=False)
+            a_looker.look(states,
+                          folder=path['graph_path'],
+                          suffix='{}_{}_{}'.format(suffix, episode, t))
+
+            actions, _ = model.choose_action(states, noisy=False)
             next_states, reward, done, info = env.step(actions)
-            # env.render(counter='{}_{}_{}'.format(t, step, episode))
+            # env.render(counter='{}_{}'.format(t, episode))
             # states = next_states
 
             t += 1
@@ -192,7 +196,8 @@ def train():
 
     a_looker.close()
 
-    with open(path['folder']+'record_{}.csv'.format(suffix), 'w', newline='') as f:
+    record_path = os.path.join(path['folder'], 'record_{}.csv'.format(suffix))
+    with open(record_path, 'w', newline='') as f:
         f = csv.writer(f)
         f.writerows(record)
         f.writerow([np.mean(sr_step), np.mean(sr_epi),  np.mean(rew_step), np.mean(rew_epi), np.mean(step_epi)])

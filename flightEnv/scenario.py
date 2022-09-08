@@ -24,6 +24,7 @@ class ConflictScene:
 
         self.entity = AircraftAgentSet(fpl_list=info['fpl_list'], candi=info['candi'])
         self.entity.do_step(info['clock'] - advance - duration, basic=True)
+        self.entity.visual(save_path='entity')
 
         self.agent_set = self.entity
         self.ghost = None
@@ -154,10 +155,10 @@ class ConflictScene:
 
     def get_states(self, a_set0, a_set1):
         return np.concatenate((self.__get_states(a_set=a_set0),
-                               self.__get_states(a_set=a_set1)),
+                               self.__get_states(a_set=a_set1, replace=False)),
                               axis=1)
 
-    def __get_states(self, a_set, length=25):
+    def __get_states(self, a_set, length=25, replace=True):
         agents = a_set.agents
         r_tree, ac_en = a_set.build_rt_index()
 
@@ -192,7 +193,8 @@ class ConflictScene:
             states.append(state)
             conflict_acs.append(conflict_ac)
 
-        self.conflict_acs = conflict_acs
+        if replace:
+            self.conflict_acs = conflict_acs
         return states
 
     def do_step(self, actions):

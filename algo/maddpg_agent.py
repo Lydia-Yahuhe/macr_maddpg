@@ -37,9 +37,9 @@ class MADDPG:
         if graph_path is not None:
             print('Draw the net of Actor and Critic!')
             net_visual([(1, dim_obs)], self.actor,
-                       filename='actor', directory=graph_path, format='png')
+                       filename='actor', directory=graph_path, format='png', cleanup=True)
             net_visual([(1, 2, dim_obs), (1, 2, dim_act)], self.critic,
-                       filename='critic', directory=graph_path, format='png')
+                       filename='critic', directory=graph_path, format='png', cleanup=True)
 
         if load_path is not None:
             print("Load model successfully!")
@@ -69,14 +69,7 @@ class MADDPG:
             self.writer.close()
 
     def update(self, step, step_size):
-        actor_old_vars = self.actor.state_dict()
-        critic_old_vars = self.critic.state_dict()
-
-        actor_new_vars, critic_new_vars = [], []
         for n_agent, transitions in self.memory.sample(self.args.batch_size, num_iter=self.args.inner_iter):
-            self.actor.load_state_dict(actor_old_vars)
-            self.critic.load_state_dict(critic_old_vars)
-
             for transition in transitions:
                 batch = Experience(*zip(*transition))
 
@@ -116,28 +109,86 @@ class MADDPG:
                 self.actor_optimizer.step()
                 self.a_loss.append(actor_loss.detach().numpy())
 
-            actor_new_vars.append(self.actor.state_dict())
-            critic_new_vars.append(self.critic.state_dict())
-
-        self.actor.load_state_dict(interpolate_vars(actor_old_vars, actor_new_vars, step_size))
-        self.critic.load_state_dict(interpolate_vars(critic_old_vars, critic_new_vars, step_size))
-
         if step % 100 == 0:
             soft_update(self.critic_target, self.critic, self.args.tau)
             soft_update(self.actor_target, self.actor, self.args.tau)
 
-            self.writer.add_scalars('L', {'c': np.mean(self.c_loss), 'a': np.mean(self.a_loss), 's': step_size}, step)
+            self.writer.add_scalars('L',
+                                    {'c': np.mean(self.c_loss), 'a': np.mean(self.a_loss), 's': step_size},
+                                    step)
             self.c_loss, self.a_loss = [], []
+
+    # def update(self, step, step_size):
+    #     actor_old_vars = self.actor.state_dict()
+    #     critic_old_vars = self.critic.state_dict()
+    #
+    #     actor_new_vars, critic_new_vars = [], []
+    #     for n_agent, transitions in self.memory.sample(self.args.batch_size, num_iter=self.args.inner_iter):
+    #         self.actor.load_state_dict(actor_old_vars)
+    #         self.critic.load_state_dict(critic_old_vars)
+    #
+    #         for transition in transitions:
+    #             batch = Experience(*zip(*transition))
+    #
+    #             state_batch = th.stack(batch.states).type(FloatTensor)
+    #             action_batch = th.stack(batch.actions).type(FloatTensor)
+    #             reward_batch = th.stack(batch.rewards).type(FloatTensor)
+    #             next_states = th.stack(batch.next_states).type(FloatTensor)
+    #
+    #             # 更新Critic
+    #             self.actor.zero_grad()
+    #             self.critic.zero_grad()
+    #             self.actor_optimizer.zero_grad()
+    #             self.critic_optimizer.zero_grad()
+    #
+    #             current_q = self.critic(state_batch, action_batch)
+    #             next_actions = self.actor_target(next_states)
+    #             target_q = self.critic_target(next_states, next_actions)
+    #             target_q = target_q * self.args.gamma + reward_batch
+    #
+    #             q_loss = nn.MSELoss()(current_q, target_q.detach())
+    #             q_loss.backward()
+    #             th.nn.utils.clip_grad_norm_(self.critic.parameters(), 1)
+    #             self.critic_optimizer.step()
+    #             self.c_loss.append(q_loss.detach().numpy())
+    #
+    #             # 更新Actor
+    #             self.actor.zero_grad()
+    #             self.critic.zero_grad()
+    #             self.actor_optimizer.zero_grad()
+    #             self.critic_optimizer.zero_grad()
+    #
+    #             ac = self.actor(state_batch)
+    #
+    #             actor_loss = -self.critic(state_batch, ac).mean()
+    #             actor_loss.backward()
+    #             th.nn.utils.clip_grad_norm_(self.actor.parameters(), 1)
+    #             self.actor_optimizer.step()
+    #             self.a_loss.append(actor_loss.detach().numpy())
+    #
+    #         actor_new_vars.append(self.actor.state_dict())
+    #         critic_new_vars.append(self.critic.state_dict())
+    #
+    #     self.actor.load_state_dict(interpolate_vars(actor_old_vars, actor_new_vars, step_size))
+    #     self.critic.load_state_dict(interpolate_vars(critic_old_vars, critic_new_vars, step_size))
+    #
+    #     if step % 100 == 0:
+    #         soft_update(self.critic_target, self.critic, self.args.tau)
+    #         soft_update(self.actor_target, self.actor, self.args.tau)
+    #
+    #         self.writer.add_scalars('L', {'c': np.mean(self.c_loss), 'a': np.mean(self.a_loss), 's': step_size}, step)
+    #         self.c_loss, self.a_loss = [], []
 
     def choose_action(self, states, noisy=True):
         states = th.from_numpy(np.stack(states)).float().to(device)
 
-        actions = self.actor(states)
+        actions, rand = self.actor(states), False
         if noisy and random.random() <= self.var:
             actions += th.randn(actions.shape).type(FloatTensor)
             actions = th.clamp(actions, -1, 1)
+            rand = True
 
-            if self.var > 0.05:
-                self.var *= 0.99999
+        if self.var > 0.05:
+            self.var *= 0.99995
 
-        return actions.data.cpu().numpy()
+        return actions.data.cpu().numpy(), rand

@@ -74,6 +74,9 @@ class ConflictEnv(gym.Env, ABC):
         if self.video_out is None:
             return
 
+        # if self.scene.result:
+        #     return
+
         image = copy.deepcopy(base_img)
 
         # 网格线
@@ -96,9 +99,6 @@ class ConflictEnv(gym.Env, ABC):
         image = add_texts_on_base_map(cmd_info, image, (750, 300), color=(0, 0, 0))
 
         image = add_texts_on_base_map({'>>> Status': ''}, image, (50, 600), color=(0, 0, 0))
-
-        if self.scene.result:
-            return
 
         now = self.scene.now()
         info = self.scene.info

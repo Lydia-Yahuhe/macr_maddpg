@@ -12,18 +12,22 @@ BoolTensor = th.BoolTensor
 FloatTensor = th.FloatTensor
 
 
-def get_folder(folder, root='trained'):
+def get_folder(folder, root='trained', allow_exist=False):
     folder = os.path.join(root, folder)
-    if os.path.exists(folder):
-        raise FileExistsError
+    if not allow_exist:
+        if os.path.exists(folder):
+            raise FileExistsError
 
     log_path = os.path.join(folder, 'logs/')
     graph_path = os.path.join(folder, 'graph/')
     model_path = os.path.join(folder, 'model/')
 
-    os.makedirs(log_path)
-    os.makedirs(graph_path)
-    os.makedirs(model_path)
+    if not os.path.exists(log_path):
+        os.makedirs(log_path)
+    if not os.path.exists(graph_path):
+        os.makedirs(graph_path)
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
 
     return {'folder': folder,
             'log_path': log_path,

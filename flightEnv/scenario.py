@@ -141,25 +141,24 @@ class ConflictScene:
         a_set_copy = AircraftAgentSet(other=a_set)
         # print('>>>t3', self.agent_set.time, a_set_copy.time, a_set.time, self.ghost.time)
 
-        tracks, is_solved, conflicts = {}, True, []
+        tracks, conflicts = {}, []
         while a_set_copy.time < now + 2 * self.advance:
-            tracks[a_set.time] = a_set_copy.do_step(duration=5)
+            tracks[a_set_copy.time] = a_set_copy.do_step(duration=5)
 
             if a_set_copy.time == now + self.advance:
                 self.ghost = AircraftAgentSet(other=a_set_copy)
 
-            conflicts = a_set_copy.detect_conflict_list(search=self.conflict_acs)
-            if len(conflicts) > 0:
-                is_solved = False
-                break
+            conflicts += a_set_copy.detect_conflict_list(search=self.conflict_acs)
 
         # print('>>>t4', self.agent_set.time, a_set_copy.time, a_set.time, self.ghost.time)
-        if is_solved:
+        if len(conflicts) <= 0:
             self.agent_set = a_set
+            self.result = True
+        else:
+            self.result = False
 
         self.tracks = tracks
         self.fake_conflicts = conflicts
-        self.result = is_solved
 
         return self.get_states(a_set0=self.ghost, a_set1=a_set_copy)
 

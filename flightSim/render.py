@@ -5,7 +5,7 @@ import cv2
 import scipy.stats as st
 from rtree import index
 
-from flightSim.load import routings
+from flightSim.load import load_data_set
 from flightSim.utils import *
 
 border_origin = [109.3, 116, 29, 33.5]
@@ -35,9 +35,11 @@ def build_rt_index_with_list(points):
 # opencv
 # ---------
 def search_routing_in_a_area(vertices):
+    route_dict = load_data_set().routings
+
     segments = {}
     check_list = []
-    for key, routing in routings.items():
+    for key, routing in route_dict.items():
         wpt_list = routing.waypointList
 
         in_poly_idx = []
@@ -103,54 +105,59 @@ def generate_wuhan_base_map(frame_size, save_path=None, show=None):
 
 def add_points_on_base_map(points, image, font_scale=0.4, color=(0, 0, 0), font=cv2.FONT_HERSHEY_SIMPLEX,
                            **kwargs):
-    points_just_coord, count = [], 0
+    count = 0
     for [name, lng, lat, alt, *point] in points:
         coord = [lng, lat]
         coord_idx = convert_coord_to_pixel([coord], border=border, scale=scale)[0]
 
+        # 每个飞机都是个圆，圆的颜色代表飞行高度，Green（低）-Yellow-Red（高），
         range_mixed = min(510, max((alt - 6000) / 4100 * 510, 0))
         if range_mixed <= 255:
             cv2.circle(image, coord_idx, radius, (0, 255, range_mixed), -1)
         else:
             cv2.circle(image, coord_idx, radius, (0, 510 - range_mixed, 255), -1)
 
+        # 如果飞机是参与冲突的
         if name in kwargs['conflict_ac']:
+            # 紫色直线代表其航向，长度代表速度
             heading_spd_point = destination(coord, point[-1], 600 / 3600 * point[0] * NM2M)
             add_lines_on_base_map([[coord, heading_spd_point, False]], image, color=(255, 0, 0), display=False)
 
+            # 画观察范围
             bbox_coords = get_bbox_2d(coord, ext=(1.0, 1.0))
             for i, pos in enumerate(bbox_coords[:-1]):
                 add_lines_on_base_map([[pos, bbox_coords[i+1], False]], image, display=False)
 
-            [x, y] = coord_idx
-            w, z = 50, 620
+            # 加上呼号
+            cv2.putText(image, name, (coord_idx[0], coord_idx[1] + 10), font, font_scale, color, 1)
 
-            cv2.putText(image, name, (x, y + 10), font, font_scale, color, 1)
-            cv2.putText(image, name, (w + count * 150, z + 10), font, font_scale, color, 1)
-            state = 'Altitude: {}'.format(round(alt, decimal))
-            cv2.putText(image, state, (w + count * 150, z + 30), font, font_scale, color, 1)
-            state = '   Speed: {}({})'.format(round(point[0], decimal), round(point[1], decimal))
-            cv2.putText(image, state, (w + count * 150, z + 50), font, font_scale, color, 1)
-            state = ' Heading: {}'.format(round(point[2], decimal))
-            cv2.putText(image, state, (w + count * 150, z + 70), font, font_scale, color, 1)
+            cmd_dict = kwargs['ac_cmd_dict'][name]
+            x, y = 750, 340+count*80
+            cv2.putText(image, name, (x, y), font, font_scale, color, 1)
+            state = 'Alt: {}({})'.format(round(alt, decimal), cmd_dict['ALT'])
+            cv2.putText(image, state, (x+20, y + 20), font, font_scale, color, 1)
+            state = 'Spd: {}({})({})'.format(round(point[0], decimal), round(point[1], decimal), cmd_dict['SPD'])
+            cv2.putText(image, state, (x+20, y + 40), font, font_scale, color, 1)
+            state = 'Hdg: {}({})'.format(round(point[2], decimal), cmd_dict['HDG'])
+            cv2.putText(image, state, (x+20, y + 60), font, font_scale, color, 1)
             count += 1
 
-        points_just_coord.append((lng, lat, alt))
-    return image, points_just_coord
+    return image
 
 
-def add_texts_on_base_map(texts, image, pos, color=(255, 255, 255), font_scale=0.4, font=cv2.FONT_HERSHEY_SIMPLEX):
+def add_texts_on_base_map(texts, image, pos, color=(255, 255, 255), font_scale=0.4, font=cv2.FONT_HERSHEY_SIMPLEX,
+                          thickness=1):
     x, y = pos
     i = 0
     for key, text in texts.items():
         if isinstance(text, str):
             string = "{}: {}".format(key, text)
-            cv2.putText(image, string, (x, y + i * 20), font, font_scale, color, 1)
+            cv2.putText(image, string, (x, y + i * 20), font, font_scale, color, thickness)
             i += 1
         else:
             for j, text_ in enumerate(text):
                 string = "{}_{}: {}".format(key, j + 1, text_)
-                cv2.putText(image, string, (x, y + i * 20), font, font_scale, color, 1)
+                cv2.putText(image, string, (x, y + i * 20), font, font_scale, color, thickness)
                 i += 1
     return image
 

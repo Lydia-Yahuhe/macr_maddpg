@@ -16,9 +16,9 @@ def calc_reward(scene):
     conflict_acs = scene.conflict_acs
 
     if scene.result:
-        return True, sum(rew_for_cmd(conflict_acs, scene.cmd_info))
+        return True, min(rew_for_cmd(conflict_acs, scene.cmd_info))
 
-    return False, sum([-1.0 for _ in conflict_acs])
+    return False, -5.0
 
 
 class ConflictEnv(gym.Env, ABC):
@@ -67,58 +67,74 @@ class ConflictEnv(gym.Env, ABC):
         solved, reward = calc_reward(scene)
         return next_states, reward, solved, {}
 
-    def render(self, mode='human', wait=100, counter=''):
+    def render(self, mode='human', wait=1, counter=''):
         if self.video_out is None:
             return
 
-        # if self.scene.result:
-        #     return
-
+        # 地图
         image = copy.deepcopy(base_img)
 
         # 网格线
         image = add_lines_on_base_map(self.scene.get_lines(), image, color=(106, 106, 255), display=False)
 
+        # 全局信息
+        now = self.scene.now()
+        conflict_acs = self.scene.conflict_acs
+        info = self.scene.info
+        global_info = {'>>> Information': 'No.{}_{}_{}'.format(info['id'], len(info['fpl_list']), counter)}
+        image = add_texts_on_base_map(global_info, image, (750, 30), color=(128, 0, 128))
+
         # 冲突信息
         conflict_info = {'>>> Conflict': str(self.scene.result)}
+        image = add_texts_on_base_map(conflict_info, image, (750, 80), color=(128, 0, 128))
+
+        conflict_info = {'Real': ''}
         for i, c in enumerate(self.scene.conflicts):
-            conflict_info['real_' + str(i + 1)] = c.to_string()
+            if i >= 4:
+                conflict_info['r_n'] = '...'
+                break
+            conflict_info['r_' + str(i + 1)] = c.to_string()
+
+        conflict_info['Fake'] = ''
         for i, c in enumerate(self.scene.fake_conflicts):
-            conflict_info['fake_' + str(i + 1)] = c.to_string()
-        image = add_texts_on_base_map(conflict_info, image, (750, 80), color=(0, 0, 0))
+            if i >= 4:
+                conflict_info['f_n'] = '...'
+                break
+            conflict_info['f_' + str(i + 1)] = c.to_string()
+        image = add_texts_on_base_map(conflict_info, image, (750, 100), color=(0, 0, 0))
 
         # 指令信息
-        cmd_info = {'>>> Command': ''}
+        cmd_info = {'>>> Command & status': ''}
+        ac_cmd_dict = {}
         for conflict_ac, cmd_list in self.scene.cmd_info.items():
+            ret = {}
             for i, cmd in enumerate(cmd_list):
-                key = '{:>10s}_{}'.format(conflict_ac, i)
-                cmd_info[key] = cmd.to_string()
-        image = add_texts_on_base_map(cmd_info, image, (750, 300), color=(0, 0, 0))
+                ret.update(cmd.to_dict())
+            ac_cmd_dict[conflict_ac] = ret
+        image = add_texts_on_base_map(cmd_info, image, (750, 320), color=(128, 0, 128))
 
-        image = add_texts_on_base_map({'>>> Status': ''}, image, (50, 600), color=(0, 0, 0))
-
-        now = self.scene.now()
-        info = self.scene.info
-        g_info = 'No.{}_{}_{}'.format(info['id'], len(info['fpl_list']), counter)
         points_dict = self.scene.tracks
-        conflict_acs = self.scene.conflict_acs
         for t in sorted(points_dict.keys()):
-            frame = copy.deepcopy(image)
             points = points_dict[t]
+            frame = copy.deepcopy(image)
 
-            # 全局信息
-            global_info = {'>>> Information': g_info,
-                           'Time': '{}({}), ac_en: {}, speed: x{}'.format(t, now, len(points), fps)}
-            frame = add_texts_on_base_map(global_info, frame, (750, 30), color=(0, 0, 0))
+            # 运行信息，读秒、在航路上的飞机数量等
+            texts = {'Time': '{}({}), ac_en: {}, speed: x{}'.format(t, now, len(points), 1000/wait)}
+            frame = add_texts_on_base_map(texts, frame, (750, 50), color=(0, 0, 0))
 
             # 轨迹点
-            frame, points_just_coord = add_points_on_base_map(points, frame, conflict_ac=conflict_acs)
+            frame = add_points_on_base_map(points, frame, conflict_ac=conflict_acs, ac_cmd_dict=ac_cmd_dict)
 
+            # 图片大小重设
             frame = cv2.resize(frame, (width, length))
             cv2.imshow(mode, frame)
-            cv2.waitKey(wait)
-            if cv2.waitKey(wait) == 113:
-                self.close()
+            button = cv2.waitKey(wait)
+            if button == 113:  # 按Q键退出渲染
+                return
+            elif button == 112:  # 按P键加速渲染
+                wait = int(wait*0.1)
+            elif button == 111:  # 按O键减速渲染
+                wait *= 10
             else:
                 self.video_out.write(frame)
 

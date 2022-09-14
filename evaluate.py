@@ -144,7 +144,7 @@ class NetLooker:
 def train():
     args = args_parse()
     path = get_folder(make_exp_id(args), allow_exist=True)
-    env = ConflictEnv(size=1, ratio=1.0,
+    env = ConflictEnv(ratio=1.0,
                       x=args.x, A=args.A, c_type=args.c_type)
 
     suffix = 10000

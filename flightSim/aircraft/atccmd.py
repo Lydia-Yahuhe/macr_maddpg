@@ -15,11 +15,10 @@ class AltCmd(ATCCmd):
     cmdType = "Altitude"
 
     def to_dict(self):
-        return {'ALT': '{},{},{}'.format(self.delta, round(self.targetAlt), self.ok)}
+        return {'ALT': '{},{}'.format(round(self.delta, 2), self.assignTime)}
 
     def to_string(self):
-        # return '{},{},{},{}'.format(self.cmdType, self.delta, round(self.targetAlt), self.ok)
-        return '{:>5d},{:>10s},{:>+6.1f}'.format(self.assignTime, self.cmdType, self.delta)
+        return '{},{},{}'.format(self.cmdType, self.assignTime, self.delta)
 
     def __str__(self):
         return 'ALTCMD: <TIME:%d, DELTA:%0.2f, TARGET:%0.2f>' % (self.assignTime, self.delta, self.targetAlt)
@@ -38,11 +37,10 @@ class SpdCmd(ATCCmd):
     cmdType = "Speed"
 
     def to_dict(self):
-        return {'SPD': '{},{},{}'.format(round(self.delta, 1), round(self.targetSpd), self.ok)}
+        return {'SPD': '{},{}'.format(round(self.delta, 2), self.assignTime)}
 
     def to_string(self):
-        # return '{},{},{},{}'.format(self.cmdType, self.delta, round(self.targetSpd), self.ok)
-        return '{:>5d},{:>10s},{:>+6.1f}'.format(self.assignTime, self.cmdType, self.delta)
+        return '{},{},{}'.format(self.cmdType, self.assignTime, self.delta)
 
     def __str__(self):
         return 'SPDCMD: <TIME:%d, DELTA:%0.2f, TARGET:%0.2f>' % (self.assignTime, self.delta, self.targetSpd)
@@ -61,11 +59,10 @@ class HdgCmd(ATCCmd):
     cmdType = "Heading"
 
     def to_dict(self):
-        return {'HDG': '{},{},{}'.format(self.delta, round(self.targetHdg), self.ok)}
+        return {'HDG': '{},{}'.format(round(self.delta, 2), self.assignTime)}
 
     def to_string(self):
-        # return '{},{},{},{}'.format(self.cmdType, self.delta, round(self.targetHdg, 1), self.ok)
-        return '{:>5d},{:>10s},{:>+6.1f}'.format(self.assignTime, self.cmdType, self.delta)
+        return '{},{},{}'.format(self.cmdType, self.assignTime, self.delta)
 
     def __str__(self):
         return 'OFFSET: <TIME:%d, DELTA:%0.2f, TARGET:%d>' % (self.assignTime, self.delta, self.targetHdg)

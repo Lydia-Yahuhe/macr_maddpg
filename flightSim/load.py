@@ -1,111 +1,87 @@
-import numpy as np
-
 import pymongo
 from tqdm import tqdm
 
-from flightSim.model import Waypoint, Routing, Aircraft, aircraftTypes, FlightPlan, DataSet, Point2D
+from flightSim.model import *
 
 
-def load_waypoint(db):
-    wpts = {}
-    for e in db['Waypoint'].find():
-        wpts[e['id']] = Waypoint(id=e['id'], location=Point2D(e['point']['lng'], e['point']['lat']))
-
-    cursor = db["Airport"].find()
-    for pt in cursor:
-        wpt = Waypoint(id=pt['id'], location=Point2D(pt['location']['lng'], pt['location']['lat']))
-        wpts[wpt.id] = wpt
-
-    return wpts
-
-
-def load_routing(db, wpts):
+def load_waypoint(database):
     ret = {}
-    cursor = db['Routing'].find()
-    # for e in cursor:
-    #     wptList = [wpts[e["departureAirport"]]]
-    #     for wptId in e['waypointList']:
-    #         wptList.append(wpts[wptId])
-    #     wptList.append(wpts[e["arrivalAirport"]])
-    #     r = Routing(e['id'], wptList)
-    #     ret[r.id] = r
+    for e in database['Waypoint'].find():
+        key = e['id']
+        ret[key] = Waypoint(id=key,
+                            location=Point2D(e['point']['lng'], e['point']['lat']))
 
-    for e in cursor:
-        wptList = []
-        for wptId in e['waypointList']:
-            wptList.append(wpts[wptId])
-        r = Routing(id=e['id'], waypointList=wptList)
-        ret[r.id] = r
-
+    for e in database["Airport"].find():
+        key = e['id']
+        ret[key] = Waypoint(id=key,
+                            location=Point2D(e['location']['lng'], e['location']['lat']))
     return ret
 
 
-def load_aircraft(db):
+def load_routing(database, wpt_dict):
     ret = {}
-    cursor = db['AircraftRandom'].find()
-    for e in cursor:
-        info = Aircraft(id=e['id'], aircraftType=aircraftTypes[e['aircraftType']])
-        ret[info.id] = info
-
+    for e in database['Routing'].find():
+        key = e['id']
+        ret[key] = Routing(id=key,
+                           waypointList=[wpt_dict[wpt_id] for wpt_id in e['waypointList']])
     return ret
 
 
-def load_flight_plan(db, aircraft, routes):
+def load_aircraft(database):
     ret = {}
-    cursor = db['FlightPlan'].find()
-    for e in cursor:
-        a = aircraft[e['aircraft']]
+    for e in database['AircraftRandom'].find():
+        key = e['id']
+        ret[key] = Aircraft(id=key,
+                            aircraftType=aircraftTypes[e['aircraftType']])
+    return ret
 
-        fpl = FlightPlan(
-            id=e['id'],
-            min_alt=0,
-            routing=routes[e['routing']],
-            startTime=e['startTime'],
-            aircraft=a,
-            max_alt=e['flightLevel']
-        )
 
-        ret[fpl.id] = fpl
-
+def load_flight_plan(database, aircraft, routes):
+    ret = {}
+    for e in database['FlightPlan'].find():
+        key = e['id']
+        ret[key] = FlightPlan(id=key,
+                              min_alt=0,
+                              routing=routes[e['routing']],
+                              startTime=e['startTime'],
+                              aircraft=aircraft[e['aircraft']],
+                              max_alt=e['flightLevel'])
     return ret
 
 
 def load_data_set():
     connection = pymongo.MongoClient('localhost')
-    db = connection['admin']
+    database = connection['admin']
 
-    wpts = load_waypoint(db)
-    aircrafts = load_aircraft(db)
-    routes = load_routing(db, wpts)
-    fpls = load_flight_plan(db, aircrafts, routes)
+    wpt_dict = load_waypoint(database)
+    ac_dict = load_aircraft(database)
+    route_dict = load_routing(database, wpt_dict)
+    fpl_dict = load_flight_plan(database, ac_dict, route_dict)
 
     connection.close()
-    return DataSet(wpts, routes, fpls, aircrafts)
-
-
-routings = load_data_set().routings
+    return DataSet(wpt_dict, route_dict, fpl_dict, ac_dict)
 
 
 def load_and_split_data(col='scenarios_big_flow_new', size=None, ratio=0.8, density=1):
-    data_set = load_data_set()
-    route_dict = data_set.routings
+    if size is None:
+        size = int(1e6)
 
-    database = pymongo.MongoClient('localhost')['admin']
-    collection = database[col]
+    route_dict = load_data_set().routings
+    collection = pymongo.MongoClient('localhost')['admin'][col]
 
     scenarios, count = [], 0
     for info in tqdm(collection.find(), desc='Loading from database'):
         del info['_id']
-        min_c_time, conflict_acs = 1e6, []
-        for c_info in info['conflict_list']:
-            min_c_time = min(min_c_time, c_info['time'])
-            conflict_acs += c_info['id'].split('-')
-        conflict_acs = list(set(conflict_acs))
+
+        c_times = [c['time'] for c in info['conflict_list']]
 
         fpl_list, candi = [], {}
         for i, fpl in enumerate(info['fpl_list']):
-            if i % density != 0 and fpl['id'] not in conflict_acs:
+            if i % density != 0:
                 continue
+
+            # start time
+            start = fpl['startTime']
 
             # routing
             routing, section = route_dict[fpl['routing']], fpl['other']
@@ -115,21 +91,21 @@ def load_and_split_data(col='scenarios_big_flow_new', size=None, ratio=0.8, dens
             ac = Aircraft(id=fpl['aircraft'], aircraftType=aircraftTypes[fpl['acType']])
 
             # flight plan
-            fpl = FlightPlan(id=fpl['id'], routing=routing, aircraft=ac, startTime=fpl['startTime'],
+            fpl = FlightPlan(id=fpl['id'], routing=routing, aircraft=ac, startTime=start,
                              min_alt=fpl['min_alt'], max_alt=fpl['max_alt'])
+
             fpl_list.append(fpl)
 
-            start = fpl.startTime
             if start in candi.keys():
                 candi[start].append(fpl.id)
             else:
                 candi[start] = [fpl.id]
 
-        scenarios.append(dict(id=str(count+1), clock=min_c_time, fpl_list=fpl_list, candi=candi))
+        scenarios.append(dict(id=str(count + 1), clock=min(c_times), fpl_list=fpl_list, candi=candi))
         count += 1
 
-        if size is not None and count >= size:
+        if count >= size:
             break
 
-    split_size = int(size*ratio) if size is not None else int(count*ratio)
+    split_size = int(count * ratio)
     return scenarios[:split_size], scenarios[split_size:]

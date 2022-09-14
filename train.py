@@ -1,9 +1,11 @@
 import argparse
-
-from flightEnv.env import ConflictEnv
+import numpy as np
+import torch as th
 
 from algo.maddpg_agent import MADDPG
-from algo.misc import *
+from algo.misc import get_folder
+
+from flightEnv.env import ConflictEnv
 
 
 def args_parse():
@@ -11,7 +13,7 @@ def args_parse():
 
     parser.add_argument('--max_episodes', default=int(1e5), type=int)
     parser.add_argument('--memory_length', default=int(1e4), type=int)
-    parser.add_argument('--max_steps', default=int(1e6), type=int)
+    parser.add_argument('--max_steps', default=int(1e5), type=int)
 
     parser.add_argument('--inner_iter', help='meta-learning parameter', default=5, type=int)  # 1
     parser.add_argument('--meta-step-size', help='meta-training step size', default=1.0, type=float)
@@ -24,12 +26,13 @@ def args_parse():
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 3
     parser.add_argument('--batch_size', default=256, type=int)  # 4
 
-    parser.add_argument('--x', default=60, type=int)  # 7
+    parser.add_argument('--x', default=0, type=int)  # 7
     parser.add_argument('--A', default=1, type=int)  # 5
     parser.add_argument('--c_type', default='conc', type=str)  # 6
     parser.add_argument('--density', default=1, type=float)  # 8
     parser.add_argument('--suffix', default='0', type=str)  # 8
 
+    parser.add_argument("--render", default=True, type=bool)
     parser.add_argument("--load_path", default=None, type=str)
     parser.add_argument("--save_interval", default=1000, type=int)
     parser.add_argument('--episode_before_train', default=1000, type=int)
@@ -45,10 +48,10 @@ def make_exp_id(args):
 def train():
     args = args_parse()
     # th.manual_seed(args.seed)
-    path = get_folder(make_exp_id(args))
 
     env = ConflictEnv(density=args.density, x=args.x, A=args.A, c_type=args.c_type)
 
+    path = get_folder(make_exp_id(args), allow_exist=True)
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
@@ -61,6 +64,7 @@ def train():
 
     # 变量：步数、回合数、回合内求解次数、回合内奖励和、是否更换新的场景
     step, episode, t, rew, change = 0, 1, 0, 0.0, True
+
     while True:
         states, done = env.reset(change=change), False
 
@@ -68,14 +72,16 @@ def train():
         if states is not None:
             actions, is_rand = model.choose_action(states, noisy=True)
             next_states, reward, done, info = env.step(actions)
-            # env.render(counter='{}_{}_{}'.format(t, step, episode))
 
-            # replay buffer R
-            obs = th.from_numpy(np.stack(states)).float().to(device)
-            next_obs = th.from_numpy(np.stack(next_states)).float().to(device)
-            rw_tensor = th.FloatTensor(np.array([reward])).to(device)
-            ac_tensor = th.FloatTensor(actions).to(device)
+            if args.render:
+                env.render(wait=1000, counter=str(t))
+
+            obs = th.from_numpy(np.stack(states)).float()
+            next_obs = th.from_numpy(np.stack(next_states)).float()
+            rw_tensor = th.FloatTensor(np.array([reward]))
+            ac_tensor = th.FloatTensor(actions)
             model.memory.push(obs.data, ac_tensor, next_obs.data, rw_tensor)
+
             # states = next_states
 
             t += 1
@@ -102,6 +108,7 @@ def train():
         else:
             change = False
 
+        # 每100回合记录训练数据
         if change and episode % 100 == 0:
             model.scalars("REW", {'t': np.mean(rew_step), 'e': np.mean(rew_epi)}, episode)
             model.scalars("SR", {'t': np.mean(sr_step), 'e': np.mean(sr_epi)}, episode)

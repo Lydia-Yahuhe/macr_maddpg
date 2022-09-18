@@ -42,17 +42,12 @@ class ConflictEnv(gym.Env, ABC):
         self.video_out = cv2.VideoWriter('trained/scenario.avi',
                                          cv2.VideoWriter_fourcc(*'MJPG'), fps, (width, length))
 
-    def reset(self, change=True):
+    def reset(self, change=True, test=False):
         if change:
             info = self.train.pop(0)
             self.scene = ConflictScene(info, **self.kwargs)
-            self.train.append(info)
-
-        return self.scene.next_point()
-
-    def reset_for_eval(self, change=True):
-        if change:
-            self.scene = ConflictScene(self.train.pop(), **self.kwargs)
+            if not test:
+                self.train.append(info)
 
         return self.scene.next_point()
 

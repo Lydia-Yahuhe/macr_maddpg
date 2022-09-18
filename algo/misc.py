@@ -6,7 +6,8 @@ import torch.nn.functional as F
 import numpy as np
 from torchviz import make_dot
 
-device = th.device("cuda") if th.cuda.is_available() else th.device("cpu")
+# device = th.device("mps")
+device = th.device("cpu")
 
 BoolTensor = th.BoolTensor
 FloatTensor = th.FloatTensor
@@ -52,7 +53,7 @@ def weight_init(m):
 
 
 def net_visual(dim_input, net, **kwargs):
-    xs = [th.randn(*dim).requires_grad_(True) for dim in dim_input]  # 定义一个网络的输入值
+    xs = [th.randn(*dim).requires_grad_(True).to(device) for dim in dim_input]  # 定义一个网络的输入值
     y = net(*xs)  # 获取网络的预测值
     net_vis = make_dot(y, params=dict(list(net.named_parameters()) + [('x', x) for x in xs]))
     net_vis.render(**kwargs)     # 生成文件

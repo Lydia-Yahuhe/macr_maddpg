@@ -110,18 +110,19 @@ def add_points_on_base_map(points, image, font_scale=0.4, color=(0, 0, 0), font=
         coord = [lng, lat]
         coord_idx = convert_coord_to_pixel([coord], border=border, scale=scale)[0]
 
-        # 每个飞机都是个圆，圆的颜色代表飞行高度，Green（低）-Yellow-Red（高），
-        range_mixed = min(510, max((alt - 6000) / 4100 * 510, 0))
-        if range_mixed <= 255:
-            cv2.circle(image, coord_idx, radius, (0, 255, range_mixed), -1)
-        else:
-            cv2.circle(image, coord_idx, radius, (0, 510 - range_mixed, 255), -1)
-
         # 如果飞机是参与冲突的
         if name in kwargs['conflict_ac']:
+            # 每个飞机都是个圆，圆的颜色代表飞行高度，Green（低）-Yellow-Red（高），
+            range_mixed = min(510, max((alt - 6000) / 4100 * 510, 0))
+            if range_mixed <= 255:
+                cv2.circle(image, coord_idx, radius, (0, 255, range_mixed), -1)
+            else:
+                cv2.circle(image, coord_idx, radius, (0, 510 - range_mixed, 255), -1)
+
             # 紫色直线代表其航向，长度代表速度
             heading_spd_point = destination(coord, point[-1], 600 / 3600 * point[0] * NM2M)
-            add_lines_on_base_map([[coord, heading_spd_point, False]], image, color=(255, 0, 0), display=False)
+            add_lines_on_base_map([[coord, heading_spd_point, False]], image,
+                                  color=(255, 0, 0), display=False, thickness=2)
 
             # 画观察范围
             bbox_coords = get_bbox_2d(coord, ext=(1.0, 1.0))
@@ -141,6 +142,8 @@ def add_points_on_base_map(points, image, font_scale=0.4, color=(0, 0, 0), font=
             state = 'Hdg: {}({})'.format(round(point[2], decimal), cmd_dict['HDG'])
             cv2.putText(image, state, (x+20, y + 60), font, font_scale, color, 1)
             count += 1
+        else:
+            cv2.circle(image, coord_idx, int(radius*0.6), (87, 139, 46), -1)
 
     return image
 
@@ -162,7 +165,7 @@ def add_texts_on_base_map(texts, image, pos, color=(255, 255, 255), font_scale=0
     return image
 
 
-def add_lines_on_base_map(lines, image, color=(255, 0, 255), display=True, font_scale=0.4,
+def add_lines_on_base_map(lines, image, color=(255, 0, 255), display=True, font_scale=0.4, thickness=1,
                           font=cv2.FONT_HERSHEY_SIMPLEX):
     if len(lines) <= 0:
         return image
@@ -172,7 +175,7 @@ def add_lines_on_base_map(lines, image, color=(255, 0, 255), display=True, font_
             color = (255, 0, 255)
 
         [start, end] = convert_coord_to_pixel([pos0, pos1], border=border, scale=scale)
-        cv2.line(image, start, end, color, 1)
+        cv2.line(image, start, end, color, thickness)
 
         if display:
             [h_dist, v_dist] = other[:2]

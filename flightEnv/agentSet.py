@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import csv
-
 import numpy as np
 from rtree import index
 
@@ -34,13 +32,16 @@ class AircraftAgentSet:
             return self.agent_id_candi + self.candi[clock]
         return self.agent_id_candi
 
+    def is_all_finished(self, acs):
+        return sum([int(ac in self.agent_id_en) for ac in acs]) <= 0
+
     def do_step(self, duration=1, basic=False):
         now = self.time
         duration -= now * int(basic)
 
         tracks = []
-        for t in range(duration):
-            clock = now + t + 1
+        for i in range(duration):
+            clock = now + i + 1
 
             agent_id_candi, agent_id_en, tracks = [], [], []
             for agent_id in self.__pre_do_step(clock):

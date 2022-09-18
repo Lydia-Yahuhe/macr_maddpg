@@ -1,4 +1,5 @@
 import argparse
+
 import numpy as np
 import torch as th
 
@@ -30,9 +31,9 @@ def args_parse():
     parser.add_argument('--A', default=1, type=int)  # 5
     parser.add_argument('--c_type', default='conc', type=str)  # 6
     parser.add_argument('--density', default=1, type=float)  # 8
-    parser.add_argument('--suffix', default='0', type=str)  # 8
+    parser.add_argument('--suffix', default='train_0', type=str)  # 8
 
-    parser.add_argument("--render", default=True, type=bool)
+    parser.add_argument("--render", default=False, type=bool)
     parser.add_argument("--load_path", default=None, type=str)
     parser.add_argument("--save_interval", default=1000, type=int)
     parser.add_argument('--episode_before_train', default=1000, type=int)
@@ -126,5 +127,7 @@ def train():
     model.close()
 
 
+# 144.7582721710205
 if __name__ == '__main__':
     train()
+

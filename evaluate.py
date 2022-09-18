@@ -2,8 +2,9 @@ import csv
 from copy import deepcopy
 import cv2
 
-from train import *
+from train_test import *
 from flightSim.utils import border_func
+from algo.misc import *
 
 
 standard_width = 1600
@@ -79,7 +80,7 @@ class NetLooker:
                 for k, coord2 in enumerate(link_metrix[i + 1]):
                     # bias的颜色（越大越长，负下正上）
                     if j == len(link_metrix[i+1]) - 1 and look_bias:
-                        c_bias = 255 if abs(biases[k]*scale) >= 1.0 else 200
+                        c_bias = 255 if abs(biases[k]*scale) >= 1.0 else 150
                         image = cv2.line(image,
                                          coord2,
                                          (coord2[0], coord2[1]-border_func(biases[k]*scale, d_type=int)*5*self.radius),
@@ -111,7 +112,7 @@ class NetLooker:
 
         image = deepcopy(self.image)
 
-        result = th.from_numpy(np.stack(inputs)).float().to(device)
+        result = th.from_numpy(inputs).float().to(device)
         for i in range(self.rows):
             if i == 0:
                 result = result
@@ -121,10 +122,8 @@ class NetLooker:
                 result = F.relu(net.FC2(result))
             elif i == 3:
                 result = F.relu(net.FC3(result))
-            elif i == 4:
-                result = F.relu(net.FC4(result))
             else:
-                result = th.tanh(net.FC5(result))
+                result = th.tanh(net.FC4(result))
 
             image = self.__look_layer(image, result[0, :], self.link_matrix[i])
 
@@ -147,13 +146,14 @@ def train():
     env = ConflictEnv(ratio=1.0,
                       x=args.x, A=args.A, c_type=args.c_type)
 
-    suffix = 10000
+    suffix = 50000
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
+                   release=False,
                    load_path=[path['model_path'], suffix])
 
-    a_looker = NetLooker(net=model.actor, name='actor', look_weight=True)
+    a_looker = NetLooker(net=model.actor, name='actor', look_weight=False)
     # c_looker = NetLooker(net=model.critic, name='critic')
 
     # 每百步的解脱率、每百回合的解脱率、每回合的步数
@@ -163,7 +163,7 @@ def train():
     # 回合数、回合内步数、回合内奖励和、是否更换新的场景
     episode, t, rew, change = 1, 0, 0.0, True
     while not (env.eval_is_over() and change):
-        states, done = env.reset_for_eval(change=change), False
+        states, done = env.reset(change=change, test=True), False
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
         if states is not None:
@@ -176,11 +176,15 @@ def train():
             # env.render(counter='{}_{}'.format(t, episode))
             # states = next_states
 
+            obs_tensors = th.from_numpy(states).float().to(device)
+            act_tensors = th.from_numpy(actions).float().to(device)
+            q = model.critic(obs_tensors.unsqueeze(0), act_tensors.unsqueeze(0))
+
             t += 1
             rew += reward
             sr_step.append(float(done))
             rew_step.append(reward)
-            print('{:>2d} {:>6d} {:>+4.2f}'.format(t, episode, reward))
+            print('{:>2d} {:>6d} {:>+4.2f} {:>+4.2f}'.format(t, episode, reward, q[0][0]))
 
         # 如果前个冲突成功解脱，则进入下一个冲突时刻，否则更换新的场景
         if not done:

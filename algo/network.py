@@ -2,36 +2,37 @@ import torch as th
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .misc import device
+
 
 class Critic(nn.Module):
-    def __init__(self, dim_obs, dim_act):
+    def __init__(self, dim_obs, dim_act, hidden=64, num_layers=2):
         super(Critic, self).__init__()
-        hidden_size = self.hidden_size = 64
-        self.num_layers = 2
-        self.lstm_critic = nn.LSTM(dim_obs+dim_act, hidden_size, self.num_layers,
-                                   batch_first=True, bidirectional=True)
-        self.fc1 = nn.Linear(hidden_size*4, hidden_size*2)
-        self.fc2 = nn.Linear(hidden_size*2, hidden_size)
-        self.fc3 = nn.Linear(hidden_size, hidden_size)
-        self.fc4 = nn.Linear(hidden_size, 1)
+        self.hidden_size = hidden
+        self.num_layers = num_layers
 
-    def forward(self, obs_, act_):
-        combined = th.cat([obs_, act_], dim=2)
+        self.fc_obs = nn.Linear(dim_obs, hidden)
+        self.fc_act = nn.Linear(dim_act, hidden)
+        self.lstm_critic = nn.LSTM(hidden*2,
+                                   hidden,
+                                   num_layers,
+                                   batch_first=True,
+                                   bidirectional=True)
+        self.fc1 = nn.Linear(hidden*2, hidden)
+        self.fc2 = nn.Linear(hidden, 1)
 
+    def forward(self, obs, act):
+        out_obs = F.relu(self.fc_obs(obs))
+        out_act = F.relu(self.fc_act(act))
+
+        combined = th.cat([out_obs, out_act], dim=2)
         batch_size = combined.size(0)
-        hidden_size = self.hidden_size
-        num_layers = self.num_layers
 
-        h0 = th.zeros(num_layers * 2, batch_size, hidden_size)
-        c0 = th.zeros(num_layers * 2, batch_size, hidden_size)
+        h0 = th.zeros(self.num_layers * 2, batch_size, self.hidden_size).to(device)
+        c0 = th.zeros(self.num_layers * 2, batch_size, self.hidden_size).to(device)
         out, _ = self.lstm_critic(combined, (h0, c0))
-        out = [out[:, 0, :].squeeze(1), out[:, -1, :].squeeze(1)]
-        out = th.stack(out, dim=1).view(batch_size, -1)
-
-        out = F.relu(self.fc1(out))
-        out = F.relu(self.fc2(out))
-        out = F.relu(self.fc3(out))
-        out = self.fc4(out)
+        out = F.relu(self.fc1(out[:, -1, :]))
+        out = self.fc2(out)
         return out
 
 

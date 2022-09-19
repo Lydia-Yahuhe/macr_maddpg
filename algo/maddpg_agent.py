@@ -67,59 +67,13 @@ class MADDPG:
         if self.writer is not None:
             self.writer.close()
 
-    def validate(self):
-        tmp = []
-        for n_agent, transitions in self.memory.sample(256, num_iter=1):
-            print(n_agent)
-            for transition in transitions:
-                batch = Experience(*zip(*transition))
-
-                state_batch = th.stack(batch.states).type(FloatTensor).to(device)
-                action_batch = th.stack(batch.actions).type(FloatTensor).to(device)
-                reward_batch = th.stack(batch.reward).type(FloatTensor).to(device)
-
-                current_q = self.critic(state_batch, action_batch)
-                print(['{:>+5.2f}'.format(q.item()) for q in current_q])
-                print(['{:>+5.2f}'.format(r.item()) for r in reward_batch])
-                q_loss = nn.MSELoss(reduction='sum')(current_q, reward_batch)
-                tmp.append(q_loss.item())
-
-        print(tmp)
-
-    def pre_tune(self, step):
-        for n_agent, transitions in self.memory.sample(256, num_iter=1):
-            for transition in transitions:
-                batch = Experience(*zip(*transition))
-
-                state_batch = th.stack(batch.states).type(FloatTensor).to(device)
-                action_batch = th.stack(batch.actions).type(FloatTensor).to(device)
-                reward_batch = th.stack(batch.reward).type(FloatTensor).to(device)
-
-                # 更新Critic
-                self.critic.zero_grad()
-                self.critic_optimizer.zero_grad()
-
-                current_q = self.critic(state_batch, action_batch)
-
-                q_loss = nn.MSELoss(reduction='sum')(current_q, reward_batch)
-                q_loss.backward()
-                th.nn.utils.clip_grad_norm_(self.critic.parameters(), 1)
-                self.critic_optimizer.step()
-                self.tmp.append(q_loss.item())
-
-        if step % 100 == 0:
-            print(np.mean(self.tmp), step)
-            self.tmp = []
-
     def update(self, step, step_size):
-        for n_agent, transitions in self.memory.sample(self.args.batch_size, num_iter=self.args.inner_iter):
-            for transition in transitions:
-                batch = Experience(*zip(*transition))
-
-                state_batch = th.stack(batch.states).type(FloatTensor).to(device)
-                action_batch = th.stack(batch.actions).type(FloatTensor).to(device)
-                reward_batch = th.stack(batch.reward).type(FloatTensor).to(device)
-                next_states = th.stack(batch.next_states).type(FloatTensor).to(device)
+        for n_agent, experiences in self.memory.sample_(self.args.batch_size, num_iter=self.args.inner_iter):
+            for e in experiences:
+                state_batch = th.from_numpy(e[0]).float().to(device)
+                action_batch = th.from_numpy(e[1]).float().to(device)
+                next_states = th.from_numpy(e[2]).float().to(device)
+                reward_batch = th.from_numpy(e[3]).float().to(device)
 
                 # 更新Critic
                 self.critic.zero_grad()

@@ -56,14 +56,6 @@ def train():
                    log_path=path['log_path'],
                    load_path=args.load_path)
 
-    for step in range(100000):
-        model.pre_tune(step)
-
-        if step % 1000 == 0:
-            model.validate()
-            model.save_model(path['model_path'], 'pre_tune_{}'.format(step))
-    return
-
     for step in tqdm(range(args.max_steps+1), desc='Model is training...'):
         model.update(step, args.meta_final)
 
@@ -75,3 +67,4 @@ def train():
 
 if __name__ == '__main__':
     train()
+

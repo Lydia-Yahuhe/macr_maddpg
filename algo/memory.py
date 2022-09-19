@@ -1,26 +1,12 @@
 from collections import namedtuple
 import random
 import numpy as np
-import torch as th
 import os
-from tqdm import tqdm
 
 names = ('states', 'actions', 'next_states', 'reward')
 Experience = namedtuple('Experience', names)
 
 root = './algo/files'
-
-
-def read_file(filename):
-    data = np.load(filename)
-
-    length = len(data[names[0]])
-
-    memory = []
-    for i in tqdm(range(length), desc='Loading from {}'.format(filename)):
-        args = [th.from_numpy(data[name][i]).float().data for name in names]
-        memory.append(Experience(*args))
-    return memory
 
 
 class ReplayMemory:
@@ -55,7 +41,19 @@ class ReplayMemory:
             yield n, [random.sample(memory, batch_size) for _ in range(num_iter)]
 
     def counter(self):
-        return {'macr_'+str(n): len(memory) for n, memory in self.memory.items()}
+        return {'macr_' + str(n): len(memory) for n, memory in self.memory.items()}
+
+    def sample_(self, batch_size, num_iter):
+        for n, [states, actions, n_states, rewards] in self.memory.items():
+            length = len(states)
+            if length < batch_size:
+                continue
+
+            experiences = []
+            for _ in range(num_iter):
+                idxes = random.sample(list(range(length)), batch_size)
+                experiences.append((states[idxes], actions[idxes], n_states[idxes], rewards[idxes]))
+            yield n, experiences
 
     def release(self):
         for file_or_folder in os.listdir(root):
@@ -63,12 +61,22 @@ class ReplayMemory:
 
             if os.path.isfile(filename) and file_or_folder.endswith('.npz'):
                 n_agents = int(file_or_folder[:-4].split('_')[-1])
-                memory = read_file(filename)
-                print(n_agents, len(memory))
+                # if n_agents not in [2, 4]:
+                #     continue
+
+                data = np.load(filename)
+                print(n_agents, file_or_folder, [data[name].shape for name in names])
+
+                # idx = np.where(data[names[-1]] >= 0)[0]
                 if n_agents not in self.memory.keys():
-                    self.memory[n_agents] = memory
+                    # self.memory[n_agents] = [data[name][idx] for name in names]
+                    self.memory[n_agents] = [data[name] for name in names]
                 else:
-                    self.memory[n_agents] += memory
+                    memory = self.memory[n_agents]
+                    # self.memory[n_agents] = [np.concatenate([memory[i], data[name][idx]])
+                    #                          for i, name in enumerate(names)]
+                    self.memory[n_agents] = [np.concatenate([memory[i], data[name]])
+                                             for i, name in enumerate(names)]
 
-        print([[n_agents, len(memory)] for n_agents, memory in self.memory.items()])
-
+                for n_agents, memory in self.memory.items():
+                    print('\t', n_agents, [m.shape for m in memory])

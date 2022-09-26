@@ -166,7 +166,7 @@ class MADDPG:
     def choose_action(self, states, noisy=True):
         states = th.from_numpy(states).float().to(device)
 
-        actions, rand = self.actor(states), False
+        actions, rand = self.actor(states.unsqueeze(0)).squeeze(0), False
         if noisy and random.random() <= self.var:
             actions += th.randn_like(actions).type(FloatTensor).to(device)
             actions = th.clamp(actions, -1, 1)

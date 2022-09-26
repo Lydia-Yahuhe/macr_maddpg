@@ -104,7 +104,8 @@ class AircraftAgentSet:
                 else:
                     state = state[int((delta-1)/2):-int((delta+1)/2)]
 
-            states.append(np.concatenate(state))
+            states.append(state)
+            # states.append(np.concatenate(state))
         return states
 
     def detect_conflict_list(self, search=None):

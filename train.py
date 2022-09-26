@@ -25,18 +25,18 @@ def args_parse():
     parser.add_argument('--seed', default=777, type=int)
     parser.add_argument('--a_lr', default=0.0001, type=float)  # 2
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 3
-    parser.add_argument('--batch_size', default=256, type=int)  # 4
+    parser.add_argument('--batch_size', default=16, type=int)  # 4
 
-    parser.add_argument('--x', default=60, type=int)  # 7
+    parser.add_argument('--x', default=30, type=int)  # 7
     parser.add_argument('--A', default=1, type=int)  # 5
     parser.add_argument('--c_type', default='conc', type=str)  # 6
-    parser.add_argument('--density', default=3, type=float)  # 8
-    parser.add_argument('--suffix', default='train', type=str)  # 8
+    parser.add_argument('--density', default=1, type=float)  # 8
+    parser.add_argument('--suffix', default='test', type=str)  # 8
 
     parser.add_argument("--render", default=False, type=bool)
     parser.add_argument("--load_path", default=None, type=str)
     parser.add_argument("--save_interval", default=1000, type=int)
-    parser.add_argument('--episode_before_train', default=1000, type=int)
+    parser.add_argument('--episode_before_train', default=100, type=int)
 
     return parser.parse_args()
 

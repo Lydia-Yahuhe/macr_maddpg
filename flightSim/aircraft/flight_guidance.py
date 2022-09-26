@@ -30,11 +30,10 @@ def update_guidance(now, guidance, status, control, profile):
     if alt_cmd is not None and now == alt_cmd.assignTime:
         delta = alt_cmd.delta
         target_alt = calc_level(status.alt, status.vSpd, delta)
-        # if target_alt > 12000 or target_alt < 6000 or v_spd * delta < 0:
-        #     alt_cmd.ok = False
-        # else:
-        #     guidance.targetAlt = target_alt
-        guidance.targetAlt = target_alt
+        if v_spd * delta < 0 or target_alt > 12000 or target_alt < 6000:
+            alt_cmd.ok = False
+        else:
+            guidance.targetAlt = target_alt
         control.transition(mode='Alt')
 
     hdg_cmd = control.hdgCmd

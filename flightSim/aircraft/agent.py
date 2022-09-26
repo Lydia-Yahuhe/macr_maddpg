@@ -9,17 +9,6 @@ from .flight_profile import update_profile, reset_profile_with_fpl
 
 class AircraftAgent:
     def __init__(self, fpl):
-        """
-        A flight with a flight plan (fpl) is a AircraftAgent. There are three status of an agent including Schedule,
-        En-route and Finished.
-              id: the call sign of aircraft/flight/agent.
-         control: the commands received from ATC.
-        guidance: the commands are transformed to the target altitude/speed/heading.
-          status: the status data including longitude, latitude, altitude, speed, climb and descent rate ...
-         profile: the navigation information.
-             fpl: the flight plan.
-          tracks: the flight trajectory.
-        """
         self.id = fpl.id
 
         self.control = FlightControl()

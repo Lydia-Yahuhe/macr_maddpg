@@ -28,7 +28,7 @@ class ConflictEnv(gym.Env, ABC):
         self.train, self.test = load_and_split_data(size=size, ratio=ratio, density=density)
 
         self.action_space = spaces.Discrete(CmdCount)
-        self.observation_space = spaces.Box(low=-1.0, high=+1.0, shape=(200,), dtype=np.float64)
+        self.observation_space = spaces.Box(low=-1.0, high=+1.0, shape=(150,), dtype=np.float64)
 
         print('----------env------------')
         print('|   split ratio: {:<6.2f} |'.format(ratio))

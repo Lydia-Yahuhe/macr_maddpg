@@ -27,11 +27,11 @@ def args_parse():
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 3
     parser.add_argument('--batch_size', default=256, type=int)  # 4
 
-    parser.add_argument('--x', default=0, type=int)  # 7
+    parser.add_argument('--x', default=60, type=int)  # 7
     parser.add_argument('--A', default=1, type=int)  # 5
     parser.add_argument('--c_type', default='conc', type=str)  # 6
-    parser.add_argument('--density', default=1, type=float)  # 8
-    parser.add_argument('--suffix', default='train_0', type=str)  # 8
+    parser.add_argument('--density', default=3, type=float)  # 8
+    parser.add_argument('--suffix', default='train', type=str)  # 8
 
     parser.add_argument("--render", default=False, type=bool)
     parser.add_argument("--load_path", default=None, type=str)
@@ -48,7 +48,6 @@ def make_exp_id(args):
 
 def train():
     args = args_parse()
-    # th.manual_seed(args.seed)
 
     env = ConflictEnv(density=args.density, x=args.x, A=args.A, c_type=args.c_type)
 
@@ -56,7 +55,7 @@ def train():
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
-                   graph_path=path['graph_path'],
+                   # graph_path=path['graph_path'],
                    log_path=path['log_path'],
                    load_path=args.load_path)
 
@@ -90,8 +89,10 @@ def train():
             rew += reward
             sr_step.append(float(done))
             rew_step.append(reward)
-            print('[{:>2d} {:>6d} {:>6d} {:>+4.2f} {}]'.format(t, step, episode, reward, int(is_rand)))
-
+            q = model.critic(obs.unsqueeze(0), ac_tensor.unsqueeze(0))
+            print('[{:>2d} {:>6d} {:>6d} {:>+4.2f} {:>+4.2f} {}]'.format(t, step, episode, reward,
+                                                                         q[0][0],
+                                                                         int(is_rand)))
             # 开始更新网络参数
             if episode >= args.episode_before_train:
                 frac_done = min(step / args.max_steps, 1.0)
@@ -127,7 +128,6 @@ def train():
     model.close()
 
 
-# 144.7582721710205
 if __name__ == '__main__':
     train()
 

@@ -11,7 +11,7 @@ from algo.misc import *
 
 
 class MADDPG:
-    def __init__(self, dim_obs, dim_act, args, release=False, **kwargs):
+    def __init__(self, dim_obs, dim_act, args, **kwargs):
         self.args = args
         self.var = 1.0
 
@@ -23,9 +23,8 @@ class MADDPG:
         self.critic_optimizer = Adam(self.critic.parameters(), lr=args.c_lr)
         self.actor_optimizer = Adam(self.actor.parameters(), lr=args.a_lr)
 
-        self.memory = ReplayMemory(args.memory_length, release=release)
-        self.c_loss, self.a_loss, self.target_q, self.current_q = [], [], [], []
-        self.tmp = []
+        self.memory = ReplayMemory(args.memory_length)
+        self.c_loss, self.a_loss = [], []
 
         self.__addiction(dim_obs, dim_act, **kwargs)
 
@@ -68,29 +67,27 @@ class MADDPG:
             self.writer.close()
 
     def update(self, step, step_size):
-        for n_agent, experiences in self.memory.sample_(self.args.batch_size, num_iter=self.args.inner_iter):
+        for n_agent, experiences in self.memory.sample(self.args.batch_size, num_iter=self.args.inner_iter):
             for e in experiences:
-                state_batch = th.from_numpy(e[0]).float().to(device)
-                action_batch = th.from_numpy(e[1]).float().to(device)
-                next_states = th.from_numpy(e[2]).float().to(device)
-                reward_batch = th.from_numpy(e[3]).float().to(device)
+                batch = Experience(*zip(*e))
+
+                state_batch = th.stack(batch.states).type(FloatTensor)
+                action_batch = th.stack(batch.actions).type(FloatTensor)
+                reward_batch = th.stack(batch.reward).type(FloatTensor)
+                next_states = th.stack(batch.next_states).type(FloatTensor)
 
                 # 更新Critic
                 self.critic.zero_grad()
                 self.critic_optimizer.zero_grad()
 
                 current_q = self.critic(state_batch, action_batch)
-                next_actions = self.actor_target(next_states)
-                target_q = self.critic_target(next_states, next_actions)
-                target_q = target_q * self.args.gamma + reward_batch
+                target_q = reward_batch
 
                 q_loss = nn.MSELoss(reduction='sum')(current_q, target_q.detach())
                 q_loss.backward()
                 th.nn.utils.clip_grad_norm_(self.critic.parameters(), 1)
                 self.critic_optimizer.step()
                 self.c_loss.append(q_loss.item())
-                self.target_q.append(target_q.mean().item())
-                self.current_q.append(current_q.mean().item())
 
                 # 更新Actor
                 self.actor.zero_grad()
@@ -108,8 +105,6 @@ class MADDPG:
 
             self.writer.add_scalars('L', {'c': np.mean(self.c_loss),
                                           'a': np.mean(self.a_loss),
-                                          't_q': np.mean(self.target_q),
-                                          'c_q': np.mean(self.current_q),
                                           's': step_size}, step)
             self.c_loss, self.a_loss = [], []
 
@@ -169,11 +164,11 @@ class MADDPG:
     #         self.c_loss, self.a_loss = [], []
 
     def choose_action(self, states, noisy=True):
-        states = th.from_numpy(np.stack(states)).float().to(device)
+        states = th.from_numpy(states).float().to(device)
 
         actions, rand = self.actor(states), False
         if noisy and random.random() <= self.var:
-            actions += th.randn(actions.shape).type(FloatTensor).to(device)
+            actions += th.randn_like(actions).type(FloatTensor).to(device)
             actions = th.clamp(actions, -1, 1)
             rand = True
 

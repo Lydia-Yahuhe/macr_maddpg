@@ -2,7 +2,7 @@ import csv
 from copy import deepcopy
 import cv2
 
-from train_test_1 import *
+from train import *
 from flightSim.utils import border_func
 from algo.misc import *
 
@@ -146,11 +146,10 @@ def train():
     env = ConflictEnv(ratio=1.0,
                       x=args.x, A=args.A, c_type=args.c_type)
 
-    suffix = 100000
+    suffix = 16000
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
-                   release=False,
                    load_path=[path['model_path'], suffix])
 
     a_looker = NetLooker(net=model.actor, name='actor', look_weight=False)
@@ -167,9 +166,9 @@ def train():
 
         # 如果states是None，则该回合的所有冲突都被成功解脱
         if states is not None:
-            # a_looker.look(states,
-            #               folder=path['graph_path'],
-            #               suffix='{}_{}_{}'.format(suffix, episode, t))
+            a_looker.look(states,
+                          folder=path['graph_path'],
+                          suffix='{}_{}_{}'.format(suffix, episode, t))
 
             actions, _ = model.choose_action(states, noisy=False)
             next_states, reward, done, info = env.step(actions)

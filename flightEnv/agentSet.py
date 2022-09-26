@@ -84,16 +84,14 @@ class AircraftAgentSet:
                 a1 = agents[ac_en[i]]
                 pos1 = a1.position
 
-                key = position_in_bbox(bbox, pos1)
-                state_dict[key] = [
-                    2 * float(a1.id in conflict_acs) - 1.0,
+                state_dict[position_in_bbox(bbox, pos1)] = [
                     pos1[0] - pos0[0],
                     pos1[1] - pos0[1],
                     (pos1[2] - pos0[2]) / 1500.0
                 ]
 
             if len(state_dict) <= length:
-                state = [[0.0 for _ in range(4)] for _ in range(length)]
+                state = [[0.0 for _ in range(3)] for _ in range(length)]
                 j = 0
                 for key in sorted(state_dict.keys()):
                     state[j] = state_dict[key]

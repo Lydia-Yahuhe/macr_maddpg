@@ -32,25 +32,16 @@ class Critic(nn.Module):
 
 
 class Actor(nn.Module):
-    def __init__(self, dim_obs, dim_act, hidden=64, num_layers=2):
+    def __init__(self, dim_obs, dim_act, hidden=64):
         super(Actor, self).__init__()
-        self.hidden_size = hidden
-        self.num_layers = num_layers
-
-        self.lstm_actor = nn.LSTM(dim_obs,
-                                  hidden,
-                                  num_layers,
-                                  batch_first=True,
-                                  bidirectional=True)
-        self.fc1 = nn.Linear(hidden * 2, hidden)
-        self.fc2 = nn.Linear(hidden, dim_act)
+        self.fc1 = nn.Linear(dim_obs, hidden*2)
+        self.fc2 = nn.Linear(hidden*2, hidden*2)
+        self.fc3 = nn.Linear(hidden*2, hidden)
+        self.fc4 = nn.Linear(hidden, dim_act)
 
     def forward(self, obs):
-        batch_size = obs.size(0)
-
-        h0 = th.zeros(self.num_layers * 2, batch_size, self.hidden_size).to(device)
-        c0 = th.zeros(self.num_layers * 2, batch_size, self.hidden_size).to(device)
-        out, _ = self.lstm_actor(obs, (h0, c0))
-        out = F.relu(self.fc1(out))
-        out = th.tanh(self.fc2(out))
+        out = F.relu(self.fc1(obs))
+        out = F.relu(self.fc2(out))
+        out = F.relu(self.fc3(out))
+        out = th.tanh(self.fc4(out))
         return out

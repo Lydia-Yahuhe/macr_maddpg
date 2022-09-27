@@ -103,9 +103,9 @@ class MADDPG:
             soft_update(self.critic_target, self.critic, self.args.tau)
             soft_update(self.actor_target, self.actor, self.args.tau)
 
-            self.writer.add_scalars('L', {'c': np.mean(self.c_loss),
-                                          'a': np.mean(self.a_loss),
-                                          's': step_size}, step)
+            self.writer.add_scalars('L', {'critic': np.mean(self.c_loss),
+                                          'actor': np.mean(self.a_loss),
+                                          'step': step_size}, step)
             self.c_loss, self.a_loss = [], []
 
     # def update(self, step, step_size):
@@ -166,7 +166,7 @@ class MADDPG:
     def choose_action(self, states, noisy=True):
         states = th.from_numpy(states).float().to(device)
 
-        actions, rand = self.actor(states.unsqueeze(0)).squeeze(0), False
+        actions, rand = self.actor(states), False
         if noisy and random.random() <= self.var:
             actions += th.randn_like(actions).type(FloatTensor).to(device)
             actions = th.clamp(actions, -1, 1)

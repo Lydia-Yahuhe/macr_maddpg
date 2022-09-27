@@ -22,40 +22,45 @@ def args_parse():
 
     parser.add_argument('--tau', default=0.001, type=float)
     parser.add_argument('--gamma', default=0.0, type=float)
-    parser.add_argument('--seed', default=777, type=int)
     parser.add_argument('--a_lr', default=0.0001, type=float)  # 2
     parser.add_argument('--c_lr', default=0.0001, type=float)  # 3
-    parser.add_argument('--batch_size', default=16, type=int)  # 4
+    parser.add_argument('--batch_size', default=256, type=int)  # 4
 
-    parser.add_argument('--x', default=30, type=int)  # 7
+    parser.add_argument('--x', default=0, type=int)  # 7
     parser.add_argument('--A', default=1, type=int)  # 5
-    parser.add_argument('--c_type', default='conc', type=str)  # 6
-    parser.add_argument('--density', default=1, type=float)  # 8
-    parser.add_argument('--suffix', default='test', type=str)  # 8
+    parser.add_argument('--c_type', default='pair', type=str)  # 6
+    parser.add_argument('--density', default=3, type=float)  # 8
+    parser.add_argument('--suffix', default='1.1', type=str)  # 8
 
-    parser.add_argument("--render", default=False, type=bool)
+    parser.add_argument("--render", default=True, type=bool)
+    # parser.add_argument("--load_path", default=['trained/pretrain/', 100], type=list)
     parser.add_argument("--load_path", default=None, type=str)
     parser.add_argument("--save_interval", default=1000, type=int)
-    parser.add_argument('--episode_before_train', default=100, type=int)
+    parser.add_argument('--episode_before_train', default=1000, type=int)
 
     return parser.parse_args()
 
 
 def make_exp_id(args):
-    return 'train_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.a_lr, args.c_lr, args.batch_size,
-                                                     args.A, args.c_type, args.x, args.density, args.suffix)
+    return 'exp_{}_{}_{}_{}_{}_{}_{}_{}_{}'.format(args.inner_iter, args.a_lr, args.c_lr, args.batch_size,
+                                                   args.A, args.c_type, args.x, args.density, args.suffix)
 
 
 def train():
+    # 超参数
     args = args_parse()
 
+    # 冲突环境
     env = ConflictEnv(density=args.density, x=args.x, A=args.A, c_type=args.c_type)
 
+    # 数据记录（计算图、logs和网络参数）的保存文件路径
     path = get_folder(make_exp_id(args), allow_exist=True)
-    model = MADDPG(env.observation_space.shape[0],
-                   env.action_space.n,
-                   args,
-                   # graph_path=path['graph_path'],
+
+    # 模型（Actor网络和Critic网络）
+    model = MADDPG(dim_obs=env.observation_space.shape[0],
+                   dim_act=env.action_space.n,
+                   args=args,
+                   graph_path=path['graph_path'],
                    log_path=path['log_path'],
                    load_path=args.load_path)
 
@@ -130,4 +135,3 @@ def train():
 
 if __name__ == '__main__':
     train()
-

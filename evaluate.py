@@ -117,13 +117,13 @@ class NetLooker:
             if i == 0:
                 result = result
             elif i == 1:
-                result = F.relu(net.FC1(result))
+                result = F.relu(net.fc1(result))
             elif i == 2:
-                result = F.relu(net.FC2(result))
+                result = F.relu(net.fc2(result))
             elif i == 3:
-                result = F.relu(net.FC3(result))
+                result = F.relu(net.fc3(result))
             else:
-                result = th.tanh(net.FC4(result))
+                result = th.tanh(net.fc4(result))
 
             image = self.__look_layer(image, result[0, :], self.link_matrix[i])
 
@@ -146,7 +146,7 @@ def train():
     env = ConflictEnv(ratio=1.0,
                       x=args.x, A=args.A, c_type=args.c_type)
 
-    suffix = 16000
+    suffix = 8000
     model = MADDPG(env.observation_space.shape[0],
                    env.action_space.n,
                    args,
@@ -170,7 +170,7 @@ def train():
                           folder=path['graph_path'],
                           suffix='{}_{}_{}'.format(suffix, episode, t))
 
-            actions, _ = model.choose_action(states, noisy=False)
+            actions, _ = model.choose_action(states, noisy=True)
             next_states, reward, done, info = env.step(actions)
             # env.render(counter='{}_{}'.format(t, episode))
             # states = next_states
